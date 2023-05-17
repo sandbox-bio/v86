@@ -96,6 +96,9 @@ RUN printf '%s\n' 9p 9pnet 9pnet_virtio virtio virtio_ring virtio_pci | tee -a /
     echo 'BOOT=boot-9p' | tee -a /etc/initramfs-tools/initramfs.conf && \
     update-initramfs -u
 
+# Cleanup (doesn't seem to impact size)
+RUN apt-get remove -y gcc make autoconf meson ninja-build build-essential
+
 RUN apt-get --yes clean && \
     rm -r /var/lib/apt/lists/* && \
     rm -r /usr/share/doc/* && \

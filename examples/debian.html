@@ -16,6 +16,9 @@ window.onload = function()
         filesystem: { baseurl: "../images/debian-9p-rootfs-flat/" },
         autostart: true,
     });
+    emulator.add_listener("screen-put-char", chr => {
+        console.log("CHR", chr)
+    });
 };
 
 async function test() {
