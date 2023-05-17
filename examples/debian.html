@@ -4,19 +4,23 @@
 <script src="../build/libv86.js"></script>
 <script>
 "use strict";
-
+let emulator;
 window.onload = function()
 {
-    var emulator = new V86Starter({
+    emulator = new V86Starter({
         wasm_path: "../build/v86.wasm",
         memory_size: 512 * 1024 * 1024,
         vga_memory_size: 8 * 1024 * 1024,
         screen_container: document.getElementById("screen_container"),
-        initial_state: { url: "../images/debian-state-base.bin" },
+        initial_state: { url: "../images/debian-state-base.bin.zst" },
         filesystem: { baseurl: "../images/debian-9p-rootfs-flat/" },
         autostart: true,
     });
 };
+
+async function test() {
+    console.log(await emulator.save_state());
+}
 </script>
 
 <!-- A minimal structure for the ScreenAdapter defined in browser/screen.js -->
@@ -24,3 +28,5 @@ window.onload = function()
     <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
     <canvas style="display: none"></canvas>
 </div>
+
+<button onclick="test()">export state</button>
