@@ -1,8 +1,10 @@
-FROM i386/debian:buster
+FROM i386/debian:bullseye
 
 ENV DEBIAN_FRONTEND noninteractive
 
+# ------------------------------------------------------------------------------
 # Base image
+# ------------------------------------------------------------------------------
 RUN apt update && \
     apt --yes --no-install-recommends install \
         linux-image-686 grub2 systemd libterm-readline-perl-perl locales && \
@@ -24,7 +26,9 @@ RUN apt update && \
 # Utilities
 RUN apt --yes --no-install-recommends install vim less
 
+# ------------------------------------------------------------------------------
 # Bioinformatics
+# ------------------------------------------------------------------------------
 # Install gcc/make/libc6-dev, install bioinfo tools, then remove it from image
 RUN apt --yes --no-install-recommends install \
     git ca-certificates \
@@ -52,19 +56,36 @@ RUN git clone https://github.com/lh3/seqtk.git && cd seqtk && make
 
 # Freebayes
 RUN apt install -y wget meson ninja-build
-# RUN cd /tmp && wget https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install.sh && chmod +x guix-install.sh && ./guix-install.sh
-# RUN guix build -f guix.scm
 RUN apt install -y pkg-config zlib1g zlib1g-dev
-RUN git clone --recursive https://github.com/freebayes/freebayes.git
-RUN cd /root/freebayes && \
-    meson build/ --buildtype debug
+RUN cd /root/ && git clone --recursive https://github.com/freebayes/freebayes.git
+RUN cd /root/freebayes && meson build/ --buildtype debug
+RUN cd /root/freebayes/build && ninja
+# ninja test
 
+# # Vsearch
+# RUN cd /root/ && wget https://github.com/torognes/vsearch/archive/v2.22.1.tar.gz && tar xzf v2.22.1.tar.gz && cd vsearch-2.22.1
+# RUN cd /root/vsearch-2.22.1 && ./autogen.sh
+# RUN cd /root/vsearch-2.22.1 && ./configure CFLAGS="-O3" CXXFLAGS="-O3"
+# RUN cd /root/vsearch-2.22.1 && make
+# RUN cd /root/vsearch-2.22.1 && make install  # as root or sudo make install
 
+# Kraken2
+RUN cd /root && git clone https://github.com/DerrickWood/kraken2.git
+RUN cd /root/kraken2/ && mkdir /root/kraken2/install && ./install_kraken2.sh /root/kraken2/install
 
-# RUN cd /root && git clone --recursive https://github.com/arq5x/lumpy-sv.git
-# RUN apt install -y build-essential
-# RUN cd /root/lumpy-sv && make && cp bin/* /usr/local/bin/.
+# # Shasta
+# RUN cd root && git clone https://github.com/paoloshasta/shasta.git
+# RUN cd /root/shasta/ && ./scripts/InstallPrerequisites-Ubuntu.sh
+# RUN cd /root/shasta/ && mkdir shasta-build && cd shasta-build && cmake ../shasta && make all -j && make install
 
+# Lumpy
+RUN apt install -y build-essential
+RUN cd /root && git clone --recursive https://github.com/arq5x/lumpy-sv.git
+RUN cd /root/lumpy-sv && make && cp bin/* /usr/local/bin/.
+
+# ------------------------------------------------------------------------------
+# Setup
+# ------------------------------------------------------------------------------
 COPY getty-noclear.conf getty-override.conf /etc/systemd/system/getty@tty1.service.d/
 COPY getty-autologin-serial.conf /etc/systemd/system/serial-getty@ttyS0.service.d/
 COPY logind.conf /etc/systemd/logind.conf
