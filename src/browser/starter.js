@@ -1085,7 +1085,6 @@ V86Starter.prototype.keyboard_set_status = function(enabled)
  */
 V86Starter.prototype.serial0_send = function(data)
 {
-    console.log("Data", data)
     for(var i = 0; i < data.length; i++)
     {
         this.bus.send("serial0-input", data.charCodeAt(i));
