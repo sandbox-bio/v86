@@ -13,3 +13,4 @@ cd tools/docker/debian
 * Install rust
 * Run `rustup target add wasm32-unknown-unknown`
 * Run `make all`
+* Run `make build/xterm.js`
