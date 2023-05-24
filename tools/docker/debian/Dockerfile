@@ -103,17 +103,8 @@ RUN apt --yes --no-install-recommends install \
 # RUN cd /root && git clone https://github.com/lh3/minimap2 && cd minimap2 && make
 
 # Java
-# RUN cd /root && \
-#     curl -O http://snapshot.debian.org/archive/debian-security/20220210T085353Z/pool/updates/main/o/openjdk-8/openjdk-8-jre-headless_8u322-b06-1~deb9u1_i386.deb && \
-#     dpkg -i *.deb
 RUN apt-get install -y openjdk-17-jdk
-
-# ENV DEBIAN_FRONTEND=noninteractive
-# RUN mkdir -p /usr/share/man/man1 /usr/share/man/man2
-# RUN apt install -y ca-certificates
-# RUN mkdir /etc/ssl/certs/java && touch /etc/ssl/certs/java/cacerts
-# RUN dpkg --purge --force-depends ca-certificates-java && apt-get install -y ca-certificates-java
-
+RUN apt install -y curl
 # FastQC
 RUN cd /root && git clone https://github.com/s-andrews/FastQC.git
 
@@ -122,11 +113,9 @@ RUN cd /root && \
     curl -O https://github.com/broadinstitute/picard/releases/download/3.0.0/picard.jar
 
 # GATK
-RUN cd /root && \
-    git clone https://github.com/broadinstitute/gatk.git && \
-    cd gatk && \
-    ./gradlew bundle
-
+RUN apt install -y git-lfs
+RUN cd /root && git clone https://github.com/broadinstitute/gatk.git
+RUN cd /root/gatk && ./gradlew bundle
 
 
 # # Bowtie2
