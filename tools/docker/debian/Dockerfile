@@ -24,7 +24,7 @@ RUN apt update && \
     echo "tmpfs /tmp tmpfs nodev,nosuid 0 0" >> /etc/fstab
 
 # Utilities
-RUN apt --yes --no-install-recommends install vim less
+RUN apt --yes --no-install-recommends install vim nano less
 
 # ------------------------------------------------------------------------------
 # Bioinformatics
@@ -51,7 +51,7 @@ RUN cd /root/samtools && \
     ./configure && \
     make && make install
 
-# seqtk
+# Seqtk
 RUN git clone https://github.com/lh3/seqtk.git && cd seqtk && make
 
 # Freebayes
@@ -82,6 +82,42 @@ RUN cd /root/kraken2/ && mkdir /root/kraken2/install && ./install_kraken2.sh /ro
 RUN apt install -y build-essential
 RUN cd /root && git clone --recursive https://github.com/arq5x/lumpy-sv.git
 RUN cd /root/lumpy-sv && make && cp bin/* /usr/local/bin/.
+
+# Jellyfish
+RUN apt install -y jellyfish
+
+# Move this above (breaks cache)
+RUN apt install -y curl
+
+# Bcftools
+RUN cd /root && \
+    git clone https://github.com/samtools/bcftools.git && \
+    cd bcftools && make && make install
+
+# Bedtools
+RUN cd /root && \
+    git clone https://github.com/arq5x/bedtools2.git && \
+    cd bedtools2 && make && make install
+
+# Minimap2
+RUN cd /root && git clone https://github.com/lh3/minimap2 && cd minimap2 && make
+
+# Java
+RUN cd /root && \
+    curl -O http://snapshot.debian.org/archive/debian-security/20220210T085353Z/pool/updates/main/o/openjdk-8/openjdk-8-jre-headless_8u322-b06-1~deb9u1_i386.deb && \
+    dpkg -i *.deb
+# RUN apt-get install -y openjdk-17-jdk
+
+# ENV DEBIAN_FRONTEND=noninteractive
+# RUN mkdir -p /usr/share/man/man1 /usr/share/man/man2
+# RUN apt install -y ca-certificates
+# RUN mkdir /etc/ssl/certs/java && touch /etc/ssl/certs/java/cacerts
+# RUN dpkg --purge --force-depends ca-certificates-java && apt-get install -y ca-certificates-java
+
+# FastQC
+RUN cd /root && \
+    curl -O https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.12.1.zip && \
+    unzip fastqc_v0.12.1.zip
 
 # ------------------------------------------------------------------------------
 # Setup
