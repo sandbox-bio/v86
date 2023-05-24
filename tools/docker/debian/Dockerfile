@@ -109,9 +109,8 @@ RUN apt install -y curl
 # FastQC, Picard
 RUN apt install -y fastqc picard-tools
 
-# Picard
-RUN cd /root && \
-    curl -O https://github.com/broadinstitute/picard/releases/download/3.0.0/picard.jar
+RUN cd /root && curl -O "http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.39.zip" && \
+    unzip "Trimmomatic-0.39.zip"
 
 # # Bowtie2
 # RUN cd /root && \
