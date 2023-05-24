@@ -8,7 +8,7 @@ import hashlib
 import shutil
 import tarfile
 
-HASH_LENGTH = 8
+HASH_LENGTH = 9
 
 def hash_file(filename) -> str:
     with open(filename, "rb", buffering=0) as f:

@@ -10,7 +10,9 @@ cd tools/docker/debian
 
 ### Installation
 
-* Install rust
-* Run `rustup target add wasm32-unknown-unknown`
-* Run `make all`
-* Run `make build/xterm.js`
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup target add wasm32-unknown-unknown
+make all
+make build/xterm.js
+```
