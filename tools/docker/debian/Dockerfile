@@ -105,18 +105,13 @@ RUN apt --yes --no-install-recommends install \
 # Java
 RUN apt-get install -y openjdk-17-jdk
 RUN apt install -y curl
-# FastQC
-RUN cd /root && git clone https://github.com/s-andrews/FastQC.git
+
+# FastQC, Picard
+RUN apt install -y fastqc picard-tools
 
 # Picard
 RUN cd /root && \
     curl -O https://github.com/broadinstitute/picard/releases/download/3.0.0/picard.jar
-
-# GATK
-RUN apt install -y git-lfs
-RUN cd /root && git clone https://github.com/broadinstitute/gatk.git
-RUN cd /root/gatk && ./gradlew bundle
-
 
 # # Bowtie2
 # RUN cd /root && \
