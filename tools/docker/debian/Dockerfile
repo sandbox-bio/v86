@@ -24,93 +24,76 @@ RUN apt update && \
     echo "tmpfs /tmp tmpfs nodev,nosuid 0 0" >> /etc/fstab
 
 # Utilities
-RUN apt --yes --no-install-recommends install vim nano less
+RUN apt --yes --no-install-recommends install vim nano less curl
 
 # ------------------------------------------------------------------------------
 # Bioinformatics
 # ------------------------------------------------------------------------------
-# Install gcc/make/libc6-dev, install bioinfo tools, then remove it from image
+
+# Shared dependencies
 RUN apt --yes --no-install-recommends install \
-    git ca-certificates \
-    gcc make g++ cmake autoconf libc6-dev autotools-dev automake  libtool
+    git ca-certificates gcc make g++ cmake autoconf libc6-dev autotools-dev automake libtool build-essential
 
-# # === Samtools ====
-# RUN apt install -y zlib1g-dev libbz2-dev liblzma-dev libcurl4-gnutls-dev libssl-dev 
-# # Htslib
-# RUN cd /root/ && \
-#     git clone --recursive https://github.com/samtools/htslib.git && cd htslib && git checkout 1.17 && \
-#     autoreconf -i && ./configure && make && make install
-# # Samtools
-# RUN cd /root/ && \
-#     git clone --recursive https://github.com/samtools/samtools.git && \
-#     cd samtools && git checkout 1.17 
-# RUN apt install -y libncurses5-dev
-# RUN cd /root/samtools && \
-#     autoheader && \
-#     autoconf -Wno-syntax && \
-#     ./configure && \
-#     make && make install
+# === Samtools ====
+RUN apt install -y zlib1g zlib1g-dev libbz2-dev liblzma-dev libcurl4-gnutls-dev libssl-dev libncurses5-dev
+# Htslib
+RUN cd /root/ && \
+    git clone --recursive https://github.com/samtools/htslib.git && cd htslib && git checkout 1.17 && \
+    autoreconf -i && ./configure && make && make install
+# Samtools
+RUN cd /root/ && \
+    git clone --recursive https://github.com/samtools/samtools.git && \
+    cd samtools && git checkout 1.17 
+RUN cd /root/samtools && \
+    autoheader && \
+    autoconf -Wno-syntax && \
+    ./configure && \
+    make && make install
 
-# # Seqtk
-# RUN git clone https://github.com/lh3/seqtk.git && cd seqtk && make
+# Seqtk
+RUN git clone https://github.com/lh3/seqtk.git && cd seqtk && make
 
-# # Freebayes
-# RUN apt install -y wget meson ninja-build
-# RUN apt install -y pkg-config zlib1g zlib1g-dev
-# RUN cd /root/ && git clone --recursive https://github.com/freebayes/freebayes.git
-# RUN cd /root/freebayes && meson build/ --buildtype debug
-# RUN cd /root/freebayes/build && ninja
-# # ninja test
+# Freebayes
+RUN apt install -y wget meson ninja-build pkg-config
+RUN cd /root/ && git clone --recursive https://github.com/freebayes/freebayes.git
+RUN cd /root/freebayes && meson build/ --buildtype debug
+RUN cd /root/freebayes/build && ninja
 
-# # # Vsearch
-# # RUN cd /root/ && wget https://github.com/torognes/vsearch/archive/v2.22.1.tar.gz && tar xzf v2.22.1.tar.gz && cd vsearch-2.22.1
-# # RUN cd /root/vsearch-2.22.1 && ./autogen.sh
-# # RUN cd /root/vsearch-2.22.1 && ./configure CFLAGS="-O3" CXXFLAGS="-O3"
-# # RUN cd /root/vsearch-2.22.1 && make
-# # RUN cd /root/vsearch-2.22.1 && make install  # as root or sudo make install
+# Kraken2
+RUN cd /root && git clone https://github.com/DerrickWood/kraken2.git
+RUN cd /root/kraken2/ && mkdir /root/kraken2/install && ./install_kraken2.sh /root/kraken2/install
 
-# # Kraken2
-# RUN cd /root && git clone https://github.com/DerrickWood/kraken2.git
-# RUN cd /root/kraken2/ && mkdir /root/kraken2/install && ./install_kraken2.sh /root/kraken2/install
+# Lumpy
+RUN cd /root && git clone --recursive https://github.com/arq5x/lumpy-sv.git
+RUN cd /root/lumpy-sv && make && cp bin/* /usr/local/bin/.
 
-# # # Shasta
-# # RUN cd root && git clone https://github.com/paoloshasta/shasta.git
-# # RUN cd /root/shasta/ && ./scripts/InstallPrerequisites-Ubuntu.sh
-# # RUN cd /root/shasta/ && mkdir shasta-build && cd shasta-build && cmake ../shasta && make all -j && make install
+# Jellyfish
+RUN apt install -y jellyfish
 
-# # Lumpy
-# RUN apt install -y build-essential
-# RUN cd /root && git clone --recursive https://github.com/arq5x/lumpy-sv.git
-# RUN cd /root/lumpy-sv && make && cp bin/* /usr/local/bin/.
+# Bcftools
+RUN cd /root && \
+    git clone https://github.com/samtools/bcftools.git && \
+    cd bcftools && make && make install
 
-# # Jellyfish
-# RUN apt install -y jellyfish
+# Bedtools
+RUN cd /root && \
+    git clone https://github.com/arq5x/bedtools2.git && \
+    cd bedtools2 && make && make install
 
-# # Move this above (breaks cache)
-# RUN apt install -y curl
+# Minimap2
+RUN cd /root && git clone https://github.com/lh3/minimap2 && cd minimap2 && make
 
-# # Bcftools
-# RUN cd /root && \
-#     git clone https://github.com/samtools/bcftools.git && \
-#     cd bcftools && make && make install
+# # FastQC, Picard, Trimmomatic -- Docker image won't build on Mac OS if install Java
+# RUN apt-get install -y openjdk-17-jdk
+# RUN apt install -y fastqc picard-tools
+# RUN cd /root && curl -O "http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.39.zip" && unzip "Trimmomatic-0.39.zip"
 
-# # Bedtools
-# RUN cd /root && \
-#     git clone https://github.com/arq5x/bedtools2.git && \
-#     cd bedtools2 && make && make install
+# Mummer
+RUN cd /root && curl -L -O "https://github.com/mummer4/mummer/releases/download/v4.0.0rc1/mummer-4.0.0rc1.tar.gz" && tar -xvf "mummer-4.0.0rc1.tar.gz"
+RUN cd /root/mummer-4.0.0rc1 && autoreconf -fi && ./configure && make && make install
 
-# # Minimap2
-# RUN cd /root && git clone https://github.com/lh3/minimap2 && cd minimap2 && make
-
-# Java
-RUN apt-get install -y openjdk-17-jdk
-RUN apt install -y curl
-
-# FastQC, Picard
-RUN apt install -y fastqc picard-tools
-
-RUN cd /root && curl -O "http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.39.zip" && \
-    unzip "Trimmomatic-0.39.zip"
+# Kallisto
+RUN cd /root && git clone https://github.com/pachterlab/kallisto.git && cd kallisto && mkdir build && cd build && cmake .. && make && make install 
 
 # # Bowtie2
 # RUN cd /root && \
@@ -119,24 +102,16 @@ RUN cd /root && curl -O "http://www.usadellab.org/cms/uploads/supplementary/Trim
 #     sed -i "s/BITS := 32/BITS := 64/" Makefile && \
 #     make && make install
 
-# Mummer
-RUN cd /root && curl -L -O "https://github.com/mummer4/mummer/releases/download/v4.0.0rc1/mummer-4.0.0rc1.tar.gz" && tar -xvf "mummer-4.0.0rc1.tar.gz"
-RUN cd /root/mummer-4.0.0rc1 && autoreconf -fi && ./configure && make && make install
-
 ## SPADES
 #RUN cd /root && curl -L -O "https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz" && tar -xzf SPAdes-3.15.5.tar.gz
 #RUN cd /root/SPAdes-3.15.5 && ./spades_compile.sh
 
-# Kallisto
-RUN cd /root && git clone https://github.com/pachterlab/kallisto.git && cd kallisto && mkdir build && cd build && cmake .. && make && make install 
-
-
-
-RUN echo "alias ll='ls -latrsh'" >> /root/.bashrc
 
 # ------------------------------------------------------------------------------
 # Setup
 # ------------------------------------------------------------------------------
+RUN echo "alias ll='ls -latrsh'" >> /root/.bashrc
+
 COPY getty-noclear.conf getty-override.conf /etc/systemd/system/getty@tty1.service.d/
 COPY getty-autologin-serial.conf /etc/systemd/system/serial-getty@ttyS0.service.d/
 COPY logind.conf /etc/systemd/logind.conf
