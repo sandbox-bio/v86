@@ -119,16 +119,16 @@ RUN cd /root && curl -O "http://www.usadellab.org/cms/uploads/supplementary/Trim
 #     sed -i "s/BITS := 32/BITS := 64/" Makefile && \
 #     make && make install
 
+# Mummer
+RUN cd /root && git clone https://github.com/mummer4/mummer.git
+RUN cd /root/mummer && autoreconf -fi && ./configure && make && make install
+
+
 
 # # SPADES
 # RUN cd /root && curl -L -O http://cab.spbu.ru/files/release3.15.5/SPAdes-3.15.5-Linux.tar.gz && \
 #     tar -xzf SPAdes-3.15.5-Linux.tar.gz && \
 #     cd SPAdes-3.15.5-Linux/bin/
-
-# # Mummer
-# RUN cd /root && git clone https://github.com/mummer4/mummer.git && \
-#     cd mummer && autoreconf -fi && ./configure && make && make install
-
 
 
 
