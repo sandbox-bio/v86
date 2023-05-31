@@ -123,10 +123,12 @@ RUN cd /root && curl -O "http://www.usadellab.org/cms/uploads/supplementary/Trim
 RUN cd /root && curl -L -O "https://github.com/mummer4/mummer/releases/download/v4.0.0rc1/mummer-4.0.0rc1.tar.gz" && tar -xvf "mummer-4.0.0rc1.tar.gz"
 RUN cd /root/mummer-4.0.0rc1 && autoreconf -fi && ./configure && make && make install
 
-# SPADES
-RUN cd /root && curl -L -O "https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz" && tar -xzf SPAdes-3.15.5.tar.gz
-RUN cd /root/SPAdes-3.15.5 && ./spades_compile.sh
+## SPADES
+#RUN cd /root && curl -L -O "https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz" && tar -xzf SPAdes-3.15.5.tar.gz
+#RUN cd /root/SPAdes-3.15.5 && ./spades_compile.sh
 
+# Kallisto
+RUN cd /root && git clone https://github.com/pachterlab/kallisto.git && cd kallisto && mkdir build && cd build && cmake .. && make && make install 
 
 
 
