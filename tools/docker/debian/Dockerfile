@@ -95,12 +95,11 @@ RUN cd /root/mummer-4.0.0rc1 && autoreconf -fi && ./configure && make && make in
 # Kallisto
 RUN cd /root && git clone https://github.com/pachterlab/kallisto.git && cd kallisto && mkdir build && cd build && cmake .. && make && make install 
 
-# # Bowtie2
-# RUN cd /root && \
-#     git clone https://github.com/BenLangmead/bowtie2.git
-# RUN cd /root/bowtie2 && \
-#     sed -i "s/BITS := 32/BITS := 64/" Makefile && \
-#     make && make install
+# Bowtie2
+RUN cd /root && git clone https://github.com/BenLangmead/bowtie2.git
+RUN cd /root/bowtie2 && \
+    sed -i "s/BITS := 32/BITS := 64/" Makefile && \
+    make SSE_FLAG="-msse2" && make install
 
 ## SPADES
 #RUN cd /root && curl -L -O "https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz" && tar -xzf SPAdes-3.15.5.tar.gz
