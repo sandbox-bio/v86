@@ -101,9 +101,12 @@ RUN cd /root/bowtie2 && \
     sed -i "s/BITS := 32/BITS := 64/" Makefile && \
     make SSE_FLAG="-msse2" && make install
 
-## SPADES
-#RUN cd /root && curl -L -O "https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz" && tar -xzf SPAdes-3.15.5.tar.gz
-#RUN cd /root/SPAdes-3.15.5 && ./spades_compile.sh
+# # SPADES
+# RUN cd /root && curl -L -O "https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz" && tar -xzf SPAdes-3.15.5.tar.gz
+# RUN cd /root/SPAdes-3.15.5 && git clone https://github.com/simd-everywhere/simde.git
+# RUN cd /root/SPAdes-3.15.5 && grep --include \*.hpp --include \*.h --include \*.cpp --include \*.c -R "emmintrin.h" -l . | xargs -n1 -I{} sed -i 's|#include <emmintrin.h>|#define SIMDE_ENABLE_NATIVE_ALIASES\n#include "simde\/simde\/x86\/sse2.h"|g' "{}"
+# RUN cd /root/SPAdes-3.15.5 && grep --include \*.hpp --include \*.h --include \*.cpp --include \*.c -R "xmmintrin.h" -l . | xargs -n1 -I{} sed -i 's|#include <xmmintrin.h>|#include "simde\/simde\/x86\/sse.h"|g' "{}"
+# RUN cd /root/SPAdes-3.15.5 && ./spades_compile.sh
 
 
 # ------------------------------------------------------------------------------
