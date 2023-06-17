@@ -1,4 +1,4 @@
-FROM i386/debian:bullseye
+FROM i386/debian:bullseye-20230522
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -101,12 +101,33 @@ RUN cd /root/bowtie2 && \
     sed -i "s/BITS := 32/BITS := 64/" Makefile && \
     make SSE_FLAG="-msse2" && make install
 
+# Cleanup (Move up)
+RUN rm /root/mummer-4.0.0rc1.tar.gz
+
 # # SPADES
 # RUN cd /root && curl -L -O "https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz" && tar -xzf SPAdes-3.15.5.tar.gz
 # RUN cd /root/SPAdes-3.15.5 && git clone https://github.com/simd-everywhere/simde.git
 # RUN cd /root/SPAdes-3.15.5 && grep --include \*.hpp --include \*.h --include \*.cpp --include \*.c -R "emmintrin.h" -l . | xargs -n1 -I{} sed -i 's|#include <emmintrin.h>|#define SIMDE_ENABLE_NATIVE_ALIASES\n#include "simde\/simde\/x86\/sse2.h"|g' "{}"
 # RUN cd /root/SPAdes-3.15.5 && grep --include \*.hpp --include \*.h --include \*.cpp --include \*.c -R "xmmintrin.h" -l . | xargs -n1 -I{} sed -i 's|#include <xmmintrin.h>|#include "simde\/simde\/x86\/sse.h"|g' "{}"
 # RUN cd /root/SPAdes-3.15.5 && ./spades_compile.sh
+
+# # Salmon
+# RUN cd /root && git clone https://github.com/COMBINE-lab/salmon.git
+# # Move up
+# RUN apt-get install -y unzip
+# RUN cd /root/salmon && mkdir build && cd build && cmake -DFETCH_BOOST=TRUE .. && make
+
+# Hisat2 (64-bit)
+# RUN cd /root && git clone https://github.com/DaehwanKimLab/hisat2.git
+# RUN cd /root/hisat2 && make
+
+# Python tools: MultiQC, Cutadapt, Sniffles
+RUN cd /root && apt-get install -y python3-pip
+RUN pip3 install multiqc cutadapt sniffles
+
+# NGS simulator
+RUN cd /root && git clone https://github.com/RAHenriksen/NGSNGS.git && cd NGSNGS && make HTSSRC=../htslib
+
 
 
 # ------------------------------------------------------------------------------
