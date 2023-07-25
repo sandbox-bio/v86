@@ -91,9 +91,10 @@ RUN cd /root && git clone https://github.com/lh3/minimap2 && cd minimap2 && make
 # Mummer
 RUN cd /root && curl -L -O "https://github.com/mummer4/mummer/releases/download/v4.0.0rc1/mummer-4.0.0rc1.tar.gz" && tar -xvf "mummer-4.0.0rc1.tar.gz"
 RUN cd /root/mummer-4.0.0rc1 && autoreconf -fi && ./configure && make && make install
+RUN rm /root/mummer-4.0.0rc1.tar.gz
 
 # Kallisto
-RUN cd /root && git clone https://github.com/pachterlab/kallisto.git && cd kallisto && mkdir build && cd build && cmake .. && make && make install 
+RUN cd /root && git clone https://github.com/pachterlab/kallisto.git && cd kallisto && git checkout v0.48.0 && mkdir build && cd build && cmake .. && make && make install 
 
 # Bowtie2
 RUN cd /root && git clone https://github.com/BenLangmead/bowtie2.git
@@ -102,7 +103,6 @@ RUN cd /root/bowtie2 && \
     make SSE_FLAG="-msse2" && make install
 
 # Cleanup (Move up)
-RUN rm /root/mummer-4.0.0rc1.tar.gz
 
 # # SPADES
 # RUN cd /root && curl -L -O "https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz" && tar -xzf SPAdes-3.15.5.tar.gz
@@ -128,7 +128,7 @@ RUN pip3 install multiqc cutadapt sniffles
 # NGS simulator
 RUN cd /root && git clone https://github.com/RAHenriksen/NGSNGS.git && cd NGSNGS && make HTSSRC=../htslib
 
-
+RUN apt-get install -y man man-db
 
 # ------------------------------------------------------------------------------
 # Setup
