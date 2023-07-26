@@ -24,115 +24,97 @@ RUN apt update && \
     echo "tmpfs /tmp tmpfs nodev,nosuid 0 0" >> /etc/fstab
 
 # Utilities
-RUN apt --yes --no-install-recommends install vim nano less curl
+RUN apt --yes --no-install-recommends install vim nano less curl man-db
 
-# ------------------------------------------------------------------------------
-# Bioinformatics
-# ------------------------------------------------------------------------------
-
-# Shared dependencies
+# Shared dependencies for bioinformatics tools
 RUN apt --yes --no-install-recommends install \
-    git ca-certificates gcc make g++ cmake autoconf libc6-dev autotools-dev automake libtool build-essential
+    git ca-certificates gcc make g++ cmake autoconf libc6-dev autotools-dev automake libtool \
+    build-essential zlib1g zlib1g-dev libbz2-dev liblzma-dev libcurl4-gnutls-dev libssl-dev \
+    libncurses5-dev wget meson ninja-build pkg-config
 
-# === Samtools ====
-RUN apt install -y zlib1g zlib1g-dev libbz2-dev liblzma-dev libcurl4-gnutls-dev libssl-dev libncurses5-dev
-# Htslib
-RUN cd /root/ && \
-    git clone --recursive https://github.com/samtools/htslib.git && cd htslib && git checkout 1.17 && \
-    autoreconf -i && ./configure && make && make install
-# Samtools
-RUN cd /root/ && \
-    git clone --recursive https://github.com/samtools/samtools.git && \
-    cd samtools && git checkout 1.17 
-RUN cd /root/samtools && \
-    autoheader && \
-    autoconf -Wno-syntax && \
-    ./configure && \
-    make && make install
+
+# ------------------------------------------------------------------------------
+# Bioinformatics tools - sandbox.bio v1
+# ------------------------------------------------------------------------------
+
+ENV INSTALL_DIR=/usr/local/bin
+
+ENV VERSION_HTSLIB=1.18
+ENV VERSION_SEQTK=v1.4
+ENV VERSION_BEDTOOLS=v2.31.0
+ENV VERSION_MINIMAP=v2.26
+ENV VERSION_BOWTIE=v2.5.1
+ENV VERSION_KALIGN=v3.3.5
+ENV VERSION_IVAR=v1.4.2
+ENV VERSION_FASTTREE=2.1.11
+ENV VERSION_FASTP=v0.20.1
+ENV VERSION_LSD2=v.2.4.1
+ENV VERSION_TN93=v.1.0.11
+
+WORKDIR /root/build
+
+# jq, tree
+RUN apt install -y jq tree
 
 # Seqtk
-RUN git clone https://github.com/lh3/seqtk.git && cd seqtk && make
+RUN git clone --branch ${VERSION_SEQTK} https://github.com/lh3/seqtk.git && cd seqtk && \
+    make && make install
 
-# Freebayes
-RUN apt install -y wget meson ninja-build pkg-config
-RUN cd /root/ && git clone --recursive https://github.com/freebayes/freebayes.git
-RUN cd /root/freebayes && meson build/ --buildtype debug
-RUN cd /root/freebayes/build && ninja
+# fasttree
+RUN curl -O http://www.microbesonline.org/fasttree/FastTree-${VERSION_FASTTREE}.c && \
+    gcc -O3 -finline-functions -funroll-loops -Wall -o FastTree FastTree-${VERSION_FASTTREE}.c -lm && install FastTree ${INSTALL_DIR}
 
-# Kraken2
-RUN cd /root && git clone https://github.com/DerrickWood/kraken2.git
-RUN cd /root/kraken2/ && mkdir /root/kraken2/install && ./install_kraken2.sh /root/kraken2/install
+# kalign
+RUN git clone --branch ${VERSION_KALIGN} https://github.com/TimoLassmann/kalign.git && cd kalign && \
+    mkdir build && cd build && cmake .. && make && make test && make install
 
-# Lumpy
-RUN cd /root && git clone --recursive https://github.com/arq5x/lumpy-sv.git
-RUN cd /root/lumpy-sv && make && cp bin/* /usr/local/bin/.
+# fastp
+RUN git clone --branch ${VERSION_FASTP} https://github.com/OpenGene/fastp.git && cd fastp && \
+    make && make install
 
-# Jellyfish
-RUN apt install -y jellyfish
+# lsd2
+RUN git clone --branch ${VERSION_LSD2} https://github.com/tothuhien/lsd2.git && cd lsd2/src && \
+    make && install lsd2 ${INSTALL_DIR}
 
-# Bcftools
-RUN cd /root && \
-    git clone https://github.com/samtools/bcftools.git && \
-    cd bcftools && make && make install
+# tn93
+RUN git clone --branch ${VERSION_TN93} https://github.com/veg/tn93.git && cd tn93 && \
+    cmake . && make install
 
 # Bedtools
-RUN cd /root && \
-    git clone https://github.com/arq5x/bedtools2.git && \
-    cd bedtools2 && make && make install
+RUN git clone --branch ${VERSION_BEDTOOLS} https://github.com/arq5x/bedtools2.git && cd bedtools2 && \
+    make && make install
 
 # Minimap2
-RUN cd /root && git clone https://github.com/lh3/minimap2 && cd minimap2 && make
-
-# # FastQC, Picard, Trimmomatic -- Docker image won't build on Mac OS if install Java
-# RUN apt-get install -y openjdk-17-jdk
-# RUN apt install -y fastqc picard-tools
-# RUN cd /root && curl -O "http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.39.zip" && unzip "Trimmomatic-0.39.zip"
-
-# Mummer
-RUN cd /root && curl -L -O "https://github.com/mummer4/mummer/releases/download/v4.0.0rc1/mummer-4.0.0rc1.tar.gz" && tar -xvf "mummer-4.0.0rc1.tar.gz"
-RUN cd /root/mummer-4.0.0rc1 && autoreconf -fi && ./configure && make && make install
-RUN rm /root/mummer-4.0.0rc1.tar.gz
-
-# Kallisto
-RUN cd /root && git clone https://github.com/pachterlab/kallisto.git && cd kallisto && git checkout v0.48.0 && mkdir build && cd build && cmake .. && make && make install 
+RUN git clone --branch ${VERSION_MINIMAP} https://github.com/lh3/minimap2.git && cd minimap2 && \
+    make && install minimap2 ${INSTALL_DIR}
 
 # Bowtie2
-RUN cd /root && git clone https://github.com/BenLangmead/bowtie2.git
-RUN cd /root/bowtie2 && \
-    sed -i "s/BITS := 32/BITS := 64/" Makefile && \
-    make SSE_FLAG="-msse2" && make install
+RUN git clone --branch ${VERSION_BOWTIE} https://github.com/BenLangmead/bowtie2.git && cd bowtie2 && \
+    sed -i "s/BITS := 32/BITS := 64/" Makefile && make SSE_FLAG="-msse2" && make install
 
-# Cleanup (Move up)
+# Htslib (depends on htslib)
+RUN git clone --recursive --branch ${VERSION_HTSLIB} https://github.com/samtools/htslib.git && cd htslib && \
+    autoreconf -i && ./configure && make && make install
 
-# # SPADES
-# RUN cd /root && curl -L -O "https://github.com/ablab/spades/releases/download/v3.15.5/SPAdes-3.15.5.tar.gz" && tar -xzf SPAdes-3.15.5.tar.gz
-# RUN cd /root/SPAdes-3.15.5 && git clone https://github.com/simd-everywhere/simde.git
-# RUN cd /root/SPAdes-3.15.5 && grep --include \*.hpp --include \*.h --include \*.cpp --include \*.c -R "emmintrin.h" -l . | xargs -n1 -I{} sed -i 's|#include <emmintrin.h>|#define SIMDE_ENABLE_NATIVE_ALIASES\n#include "simde\/simde\/x86\/sse2.h"|g' "{}"
-# RUN cd /root/SPAdes-3.15.5 && grep --include \*.hpp --include \*.h --include \*.cpp --include \*.c -R "xmmintrin.h" -l . | xargs -n1 -I{} sed -i 's|#include <xmmintrin.h>|#include "simde\/simde\/x86\/sse.h"|g' "{}"
-# RUN cd /root/SPAdes-3.15.5 && ./spades_compile.sh
+# Samtools (depends on htslib)
+RUN git clone --recursive --branch ${VERSION_HTSLIB} https://github.com/samtools/samtools.git && cd samtools && \
+    autoheader && autoconf -Wno-syntax && ./configure && make && make install
 
-# # Salmon
-# RUN cd /root && git clone https://github.com/COMBINE-lab/salmon.git
-# # Move up
-# RUN apt-get install -y unzip
-# RUN cd /root/salmon && mkdir build && cd build && cmake -DFETCH_BOOST=TRUE .. && make
+# Bcftools (depends on htslib)
+RUN git clone --recursive --branch ${VERSION_HTSLIB} https://github.com/samtools/bcftools.git && cd bcftools && \
+    make && make install
 
-# Hisat2 (64-bit)
-# RUN cd /root && git clone https://github.com/DaehwanKimLab/hisat2.git
-# RUN cd /root/hisat2 && make
+# ivar (depends on htslib)
+RUN git clone --branch ${VERSION_IVAR} https://github.com/andersen-lab/ivar.git && cd ivar && \
+    ./autogen.sh && ./configure && make && make install
 
-# Python tools: MultiQC, Cutadapt, Sniffles
-RUN cd /root && apt-get install -y python3-pip
-RUN pip3 install multiqc cutadapt sniffles
-
-# NGS simulator
-RUN cd /root && git clone https://github.com/RAHenriksen/NGSNGS.git && cd NGSNGS && make HTSSRC=../htslib
-
-RUN apt-get install -y man man-db
 
 # ------------------------------------------------------------------------------
 # Setup
 # ------------------------------------------------------------------------------
+
+RUN rm -rf /root/build
+
 RUN echo "alias ll='ls -latrsh'" >> /root/.bashrc
 
 COPY getty-noclear.conf getty-override.conf /etc/systemd/system/getty@tty1.service.d/
