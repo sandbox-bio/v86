@@ -150,7 +150,5 @@ RUN apt-get remove -y gcc make autoconf meson ninja-build build-essential
 
 RUN apt-get --yes clean && \
     rm -r /var/lib/apt/lists/* && \
-    rm -r /usr/share/doc/* && \
-    rm -r /usr/share/man/* && \
     rm -r /usr/share/locale/?? && \
     rm /var/log/*.log /var/log/lastlog /var/log/wtmp /var/log/apt/*.log /var/log/apt/*.xz
