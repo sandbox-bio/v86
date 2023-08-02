@@ -94,6 +94,7 @@ function V86Starter(options)
     //var adapter_bus = this.bus = WorkerBus.init(worker);
 
     this.cpu_is_running = false;
+    this.v86util = v86util;
 
     const bus = Bus.create();
     const adapter_bus = this.bus = bus[0];
