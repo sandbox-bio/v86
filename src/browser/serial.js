@@ -225,7 +225,7 @@ function SerialAdapterXtermJS(element, bus)
 
     var term = this.term = new window["Terminal"]();
     term["setOption"]("logLevel", "off");
-    term.write("sandbox.bio");
+    term.write("root@localhost:~# ");
 
     const on_data_disposable = term["onData"](function(data) {
         for(let i = 0; i < data.length; i++)

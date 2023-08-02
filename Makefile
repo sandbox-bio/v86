@@ -134,7 +134,7 @@ build/libv86.js: $(CLOSURE) src/*.js lib/*.js src/browser/*.js
 		$(CLOSURE_FLAGS)\
 		--compilation_level SIMPLE\
 		--jscomp_off=missingProperties\
-		--output_wrapper ';(function(){%output%}).call(this);'\
+		--output_wrapper '%output% export { V86Starter }'\
 		--js $(CORE_FILES)\
 		--js $(BROWSER_FILES)\
 		--js $(LIB_FILES)
