@@ -223,7 +223,10 @@ function SerialAdapterXtermJS(element, bus)
         return;
     }
 
-    var term = this.term = new window["Terminal"]();
+    var term = this.term = new window["Terminal"]({
+        cursorBlink: true,
+        bellStyle: false
+    });
     term["setOption"]("logLevel", "off");
     term.write("root@localhost:~# ");
 

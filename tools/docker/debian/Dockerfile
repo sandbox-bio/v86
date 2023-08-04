@@ -114,8 +114,8 @@ RUN git clone --branch ${VERSION_IVAR} https://github.com/andersen-lab/ivar.git 
 # ------------------------------------------------------------------------------
 
 RUN rm -rf /root/build
-
-RUN echo "alias ll='ls -latrsh'" >> /root/.bashrc
+RUN mkdir /root/sandbox/
+RUN echo "alias ll='ls -latrsh'; cd /root/sandbox/;" >> /root/.bashrc
 
 COPY getty-noclear.conf getty-override.conf /etc/systemd/system/getty@tty1.service.d/
 COPY getty-autologin-serial.conf /etc/systemd/system/serial-getty@ttyS0.service.d/
@@ -128,7 +128,7 @@ RUN printf '%s\n' 9p 9pnet 9pnet_virtio virtio virtio_ring virtio_pci | tee -a /
     update-initramfs -u
 
 # Cleanup (doesn't seem to impact size)
-RUN apt-get remove -y gcc make autoconf meson ninja-build build-essential
+RUN apt-get remove -y gcc g++ make cmake automake autoconf meson ninja-build build-essential
 
 RUN apt-get --yes clean && \
     rm -r /var/lib/apt/lists/* && \

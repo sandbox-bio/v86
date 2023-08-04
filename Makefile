@@ -20,7 +20,7 @@ endif
 WASM_OPT ?= false
 
 default: build/v86-debug.wasm
-all: build/v86_all.js build/libv86.js build/v86.wasm
+all: build/v86_all.js build/libv86.js build/libv86.sandbox.js build/v86.wasm
 all-debug: build/libv86-debug.js build/v86-debug.wasm
 browser: build/v86_all.js
 
@@ -134,11 +134,25 @@ build/libv86.js: $(CLOSURE) src/*.js lib/*.js src/browser/*.js
 		$(CLOSURE_FLAGS)\
 		--compilation_level SIMPLE\
 		--jscomp_off=missingProperties\
-		--output_wrapper '%output% export { V86Starter }'\
+		--output_wrapper ';(function(){%output%}).call(this);'\
 		--js $(CORE_FILES)\
 		--js $(BROWSER_FILES)\
 		--js $(LIB_FILES)
 	ls -lh build/libv86.js
+
+build/libv86.sandbox.js: $(CLOSURE) src/*.js lib/*.js src/browser/*.js
+	mkdir -p build
+	java -jar $(CLOSURE) \
+		--js_output_file build/libv86.sandbox.js\
+		--define=DEBUG=false\
+		$(CLOSURE_FLAGS)\
+		--compilation_level SIMPLE\
+		--jscomp_off=missingProperties\
+		--output_wrapper '%output% export { V86Starter }'\
+		--js $(CORE_FILES)\
+		--js $(BROWSER_FILES)\
+		--js $(LIB_FILES)
+	cp build/libv86.sandbox.js ../sandbox.bio/src/thirdparty/v86/libv86.js
 
 build/libv86-debug.js: $(CLOSURE) src/*.js lib/*.js src/browser/*.js
 	mkdir -p build
