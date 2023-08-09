@@ -115,7 +115,7 @@ RUN git clone --branch ${VERSION_IVAR} https://github.com/andersen-lab/ivar.git 
 
 RUN rm -rf /root/build
 RUN mkdir /root/sandbox/
-RUN echo "alias ll='ls -latrsh'; cd /root/sandbox/;" >> /root/.bashrc
+RUN echo "alias ll='ls -latrsh';" >> /root/.bashrc
 
 COPY getty-noclear.conf getty-override.conf /etc/systemd/system/getty@tty1.service.d/
 COPY getty-autologin-serial.conf /etc/systemd/system/serial-getty@ttyS0.service.d/

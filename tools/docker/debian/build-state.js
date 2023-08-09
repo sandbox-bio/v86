@@ -56,7 +56,7 @@ emulator.add_listener("serial0-output-char", function(c)
         booted = true;
 
         // sync and drop caches: Makes it safer to change the filesystem as fewer files are rendered
-        emulator.serial0_send("sync;echo 3 >/proc/sys/vm/drop_caches\n");
+        emulator.serial0_send("sync;echo 3 >/proc/sys/vm/drop_caches;cd /root/sandbox/\n");
 
         setTimeout(async function ()
             {
