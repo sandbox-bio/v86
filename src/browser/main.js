@@ -175,6 +175,11 @@
 
         const query_args = get_query_arguments();
         const host = query_args["cdn"] || (ON_LOCALHOST ? "images/" : "//k.copy.sh/");
+        const disable_jit = parseInt(query_args["jit_disable"], 10);
+        if(disable_jit > 0)
+        {
+            settings.force_disable_jit = disable_jit;
+        }
 
         // Abandonware OS images are from https://winworldpc.com/library/operating-systems
         var oses = [
@@ -227,14 +232,14 @@
                 id: "serenity",
                 name: "SerenityOS",
                 hda: {
-                    url: host + "serenity-v2.img",
-                    size: 700448768,
+                    url: host + "serenity-v3/.img.zst",
+                    size: 734003200,
                     async: true,
                     fixed_chunk_size: 1024 * 1024,
-                    use_parts: !ON_LOCALHOST,
+                    use_parts: true,
                 },
                 memory_size: 512 * 1024 * 1024,
-                state: { url: host + "serenity_state-v3.bin.zst", },
+                state: { url: host + "serenity_state-v4.bin.zst", },
                 homepage: "https://serenityos.org/",
                 mac_address_translation: true,
             },
@@ -242,38 +247,11 @@
                 id: "serenity-boot",
                 name: "SerenityOS",
                 hda: {
-                    url: host + "serenity-v2.img",
-                    size: 700448768,
+                    url: host + "serenity-v3/.img.zst",
+                    size: 734003200,
                     async: true,
                     fixed_chunk_size: 1024 * 1024,
-                    use_parts: !ON_LOCALHOST,
-                },
-                memory_size: 512 * 1024 * 1024,
-                homepage: "https://serenityos.org/",
-            },
-            {
-                id: "serenity-old",
-                name: "SerenityOS",
-                hda: {
-                    url: host + "serenity.img",
-                    size: 876 * 1024 * 1024,
-                    async: true,
-                    fixed_chunk_size: 1024 * 1024,
-                    use_parts: !ON_LOCALHOST,
-                },
-                memory_size: 512 * 1024 * 1024,
-                state: { url: host + "serenity_state-v2.bin.zst", },
-                homepage: "https://serenityos.org/",
-            },
-            {
-                id: "serenity-old-boot",
-                name: "SerenityOS",
-                hda: {
-                    url: host + "serenity.img",
-                    size: 876 * 1024 * 1024,
-                    async: true,
-                    fixed_chunk_size: 1024 * 1024,
-                    use_parts: !ON_LOCALHOST,
+                    use_parts: true,
                 },
                 memory_size: 512 * 1024 * 1024,
                 homepage: "https://serenityos.org/",
@@ -322,7 +300,7 @@
                 id: "fiwix",
                 memory_size: 256 * 1024 * 1024,
                 hda: {
-                    url: host + "fiwixos-3.2-i386.img",
+                    url: host + "fiwixos-doom-3.2-i386.img",
                     size: 1024 * 1024 * 1024,
                     async: true,
                     fixed_chunk_size: 1024 * 1024,
@@ -335,15 +313,13 @@
                 id: "haiku",
                 memory_size: 512 * 1024 * 1024,
                 hda: {
-                    url: host + "haiku-v2.img",
+                    url: host + "haiku-v3.img",
                     size: 1 * 1024 * 1024 * 1024,
                     async: true,
                     fixed_chunk_size: 1024 * 1024,
                     use_parts: !ON_LOCALHOST,
                 },
-                state: {
-                    url: host + "haiku_state-v2.bin.zst",
-                },
+                state: { url: host + "haiku_state-v3.bin.zst" },
                 name: "Haiku",
                 homepage: "https://www.haiku-os.org/",
             },
@@ -351,7 +327,7 @@
                 id: "haiku-boot",
                 memory_size: 512 * 1024 * 1024,
                 hda: {
-                    url: host + "haiku-v2.img",
+                    url: host + "haiku-v3.img",
                     size: 1 * 1024 * 1024 * 1024,
                     async: true,
                     fixed_chunk_size: 1024 * 1024,

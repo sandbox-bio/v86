@@ -15,6 +15,7 @@ extern "C" {
     pub fn io_port_write32(port: i32, value: i32);
 }
 
+use config;
 use cpu::fpu::fpu_set_tag_word;
 use cpu::global_pointers::*;
 use cpu::memory;
@@ -32,9 +33,10 @@ use paging::OrPageFault;
 use profiler;
 use profiler::stat::*;
 use state_flags::CachedStateFlags;
+pub use util::dbg_trace;
+
 use std::collections::HashSet;
 use std::ptr::NonNull;
-pub use util::dbg_trace;
 
 /// The offset for our generated functions in the wasm table. Every index less than this is
 /// reserved for rustc's indirect functions
@@ -2209,7 +2211,7 @@ pub unsafe fn trigger_pagefault_jit(fault: PageFault) {
     let present = fault.present;
     let user = fault.user;
 
-    if ::config::LOG_PAGE_FAULTS {
+    if config::LOG_PAGE_FAULTS {
         dbg_log!(
             "page fault jit w={} u={} p={} eip={:x} cr2={:x}",
             write as i32,
@@ -2280,7 +2282,7 @@ pub unsafe fn trigger_pagefault(fault: PageFault) {
     let present = fault.present;
     let user = fault.user;
 
-    if ::config::LOG_PAGE_FAULTS {
+    if config::LOG_PAGE_FAULTS {
         dbg_log!(
             "page fault w={} u={} p={} eip={:x} cr2={:x}",
             write as i32,
@@ -2869,9 +2871,9 @@ pub unsafe fn run_instruction0f_16(opcode: i32) { ::gen::interpreter0f::run(opco
 pub unsafe fn run_instruction0f_32(opcode: i32) { ::gen::interpreter0f::run(opcode as u32 | 0x100) }
 
 #[no_mangle]
-pub unsafe fn cycle_internal() {
+pub unsafe fn cycle_internal(force_disable_jit : bool) {
     profiler::stat_increment(CYCLE_INTERNAL);
-    if !::config::FORCE_DISABLE_JIT {
+    if !force_disable_jit {
         let mut jit_entry = None;
         let initial_eip = *instruction_pointer;
         let initial_state_flags = *state_flags;
@@ -3122,13 +3124,13 @@ pub unsafe fn segment_prefix_op(seg: i32) {
 }
 
 #[no_mangle]
-pub unsafe fn do_many_cycles_native() {
+pub unsafe fn do_many_cycles_native(force_disable_jit: bool) {
     profiler::stat_increment(DO_MANY_CYCLES);
     let initial_instruction_counter = *instruction_counter;
     while (*instruction_counter).wrapping_sub(initial_instruction_counter) < LOOP_COUNTER as u32
         && !*in_hlt
     {
-        cycle_internal();
+        cycle_internal(force_disable_jit);
     }
 }
 
