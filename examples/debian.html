@@ -2,87 +2,25 @@
 <title>Debian</title>
 
 <script src="../build/libv86.js"></script>
-<link rel="stylesheet" href="../v86.css">
-
-<script src="../build/xterm.js"></script>
-
-<!-- run `npm install xterm` first to get these -->
-<!-- <link rel="stylesheet" href="../node_modules/xterm/css/xterm.css" />
-<script src="../node_modules/xterm/lib/xterm.js"></script>
- -->
-
 <script>
 "use strict";
-let emulator;
-window.onload = async function()
+
+window.onload = function()
 {
-    emulator = new V86Starter({
+    var emulator = new V86Starter({
         wasm_path: "../build/v86.wasm",
         memory_size: 512 * 1024 * 1024,
         vga_memory_size: 8 * 1024 * 1024,
         screen_container: document.getElementById("screen_container"),
-        serial_container_xtermjs: document.getElementById("terminal"),
-        initial_state: { url: "../images/debian-state-base.bin.zst" },
+        initial_state: { url: "../images/debian-state-base.bin" },
         filesystem: { baseurl: "../images/debian-9p-rootfs-flat/" },
         autostart: true,
-        // cmdline: "tsc=reliable mitigations=off random.trust_cpu=on",
-        // disable_keyboard: true,
     });
-
-    // var data = "";
-
-    // emulator.add_listener("serial0-output-char", function(char)
-    // {
-    //     // console.log("char")
-    //     // console.log(char)
-    //     if(char === "\r") return;
-
-    //     data += char;
-    //     document.getElementById("terminal").value += char;
-
-    //     // if(data.endsWith(current.test))
-    //     // {
-    //     //     stage++;
-    //     //     emulator.serial0_send(current.send);
-
-    //     //     var log = "Sending: " + current.send.replace(/\n/g, "\\n") + "\n";
-    //     //     document.getElementById("log").value += log;
-    //     // }
-    // });
-
-    // emulator.keyboard_send_text("echo 123\n")
-    console.log(emulator)
-    emulator.bus.register("emulator-started", function()
-    {
-        console.log("STARTED")
-        emulator.bus.send("serial0-input", "\n".charCodeAt())
-    }, this);
-    // var term = window.term = new Terminal();
-    // term.open(document.getElementById('terminal'));
-
-    // // Wire input events from xterm.js -> ttyS0
-    // term.on('key', key => emulator.serial0_send(key));
-    // // Wire output events from ttyS0 -> xterm.js
-    // emulator.add_listener("serial0-output-char", (char) => term.write(char));
-
 };
 </script>
 
 <!-- A minimal structure for the ScreenAdapter defined in browser/screen.js -->
-<!-- <div id="screen_container">
+<div id="screen_container">
     <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
     <canvas style="display: none"></canvas>
-</div> -->
-
-<!-- <textarea rows=60 cols=60 id="terminal"></textarea> -->
-
-<!-- display for xterm.js -->
-<div id="terminal"></div>
-
-<div id="screen_container" style="display: none">
-    <div id="screen"></div>
-    <canvas id="vga"></canvas>
-    <div style="position: absolute; top: 0; z-index: 10">
-        <textarea class="phone_keyboard"></textarea>
-    </div>
 </div>
