@@ -249,6 +249,5 @@ function SerialAdapterXtermJS(element, bus)
 
 SerialAdapterXtermJS.prototype.show = function()
 {
-    // Do this in the main code so can first load addons.
-    // this.term && this.term.open(this.element);
+    this.term && this.term.open(this.element);
 };
