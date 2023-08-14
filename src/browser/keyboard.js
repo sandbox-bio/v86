@@ -326,6 +326,11 @@ function KeyboardAdapter(bus)
 
     function keyup_handler(e)
     {
+        // Don't trigger outside the terminal
+        if(e.target.tagName === "BODY") {
+            return;
+        }
+
         if(!e.altKey && keys_pressed[0x38])
         {
             // trigger ALT keyup manually - some browsers don't
@@ -337,6 +342,11 @@ function KeyboardAdapter(bus)
 
     function keydown_handler(e)
     {
+        // Don't trigger outside the terminal
+        if(e.target.tagName === "BODY") {
+            return;
+        }
+
         if(!e.altKey && keys_pressed[0x38])
         {
             // trigger ALT keyup manually - some browsers don't

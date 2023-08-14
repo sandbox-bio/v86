@@ -228,7 +228,6 @@ function SerialAdapterXtermJS(element, bus)
         bellStyle: false
     });
     term["setOption"]("logLevel", "off");
-    term.write("root@localhost:~/sandbox# ");
 
     const on_data_disposable = term["onData"](function(data) {
         for(let i = 0; i < data.length; i++)
