@@ -28,6 +28,7 @@ var emulator = new V86({
     vga_memory_size: 8 * 1024 * 1024,
     network_relay_url: "<UNUSED>",
     bzimage_initrd_from_filesystem: true,
+    uart1: true, // enable communication b/w JavaScript and v86 on serial port 1
     cmdline: "rw init=/bin/systemd root=host9p console=ttyS0 spectre_v2=off pti=off",
     filesystem: {
         basefs: {
@@ -56,7 +57,7 @@ emulator.add_listener("serial0-output-char", function(c)
         booted = true;
 
         // sync and drop caches: Makes it safer to change the filesystem as fewer files are rendered
-        emulator.serial0_send("sync;echo 3 >/proc/sys/vm/drop_caches\n");
+        emulator.serial0_send("sync;echo 3 >/proc/sys/vm/drop_caches;cd ~/tutorial\n");
 
         setTimeout(async function ()
             {

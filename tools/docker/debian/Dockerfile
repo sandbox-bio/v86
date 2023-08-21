@@ -114,6 +114,7 @@ RUN git clone --branch ${VERSION_IVAR} https://github.com/andersen-lab/ivar.git 
 # ------------------------------------------------------------------------------
 
 RUN rm -rf /root/build
+RUN mkdir /root/tutorial
 RUN echo "alias ll='ls -latrsh';" >> /root/.bashrc
 
 COPY getty-noclear.conf getty-override.conf /etc/systemd/system/getty@tty1.service.d/
