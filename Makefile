@@ -140,6 +140,8 @@ build/libv86.js: $(CLOSURE) src/*.js lib/*.js src/browser/*.js
 		--js $(LIB_FILES)
 	ls -lh build/libv86.js
 
+# Prepend require function so it doesn't fail when doing "npm run build"
+# (don't need it to support running v86 with Node.js, only in the browser)
 build/libv86.sandbox.js: $(CLOSURE) src/*.js lib/*.js src/browser/*.js
 	mkdir -p build
 	java -jar $(CLOSURE) \
@@ -148,7 +150,7 @@ build/libv86.sandbox.js: $(CLOSURE) src/*.js lib/*.js src/browser/*.js
 		$(CLOSURE_FLAGS)\
 		--compilation_level SIMPLE\
 		--jscomp_off=missingProperties\
-		--output_wrapper '%output% export { V86Starter }'\
+		--output_wrapper 'function require(){};%output% export { V86Starter }'\
 		--js $(CORE_FILES)\
 		--js $(BROWSER_FILES)\
 		--js $(LIB_FILES)
