@@ -343,7 +343,6 @@
                     size: 8 * 1024 * 1024,
                     async: false,
                 },
-                boot_order: 0x132,
                 name: "MS-DOS",
             },
             {
@@ -605,7 +604,6 @@
                     fixed_chunk_size: 256 * 1024,
                     use_parts: !ON_LOCALHOST,
                 },
-                boot_order: 0x132,
                 name: "Windows 2000",
             },
             {
@@ -1705,6 +1703,32 @@
                 elem.blur();
             };
         }
+
+        $("change_fda_image").value = settings.fda ? "Eject floppy image" : "Insert floppy image";
+        $("change_fda_image").onclick = function()
+        {
+            if(emulator.v86.cpu.devices.fdc.fda_image)
+            {
+                emulator.eject_fda();
+                $("change_fda_image").value = "Insert floppy image";
+            }
+            else
+            {
+                const file_input = document.createElement("input");
+                file_input.type = "file";
+                file_input.onchange = async function(e)
+                {
+                    const file = file_input.files[0];
+                    if(file)
+                    {
+                        await emulator.set_fda({ buffer: file });
+                        $("change_fda_image").value = "Eject floppy image";
+                    }
+                };
+                file_input.click();
+            }
+            $("change_fda_image").blur();
+        };
 
         $("memory_dump").onclick = function()
         {

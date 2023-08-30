@@ -158,6 +158,7 @@
                 <td><label for="boot_order">Boot order</label></td>
                 <td>
                     <select id="boot_order">
+                        <option value="0">Auto</option>
                         <option value="213">CD / Floppy / Hard Disk</option>
                         <option value="123">CD / Hard Disk / Floppy</option>
                         <option value="231">Floppy / CD / Hard Disk</option>
@@ -184,6 +185,7 @@
         <input type="button" value="Get hard disk image" id="get_hda_image">
         <input type="button" value="Get second hard disk image" id="get_hdb_image">
         <input type="button" value="Get cdrom image" id="get_cdrom_image">
+        <input type="button" value="Insert floppy image" id="change_fda_image">
         <input type="button" value="Save State" id="save_state">
         <input type="button" value="Load State" id="load_state"> <input type="file" style="display: none" id="load_state_input">
         <input type="button" value="Memory Dump" id="memory_dump">
@@ -200,18 +202,6 @@
         </label>
 
         <br>
-        <label id="change_fda" style="display: none">
-            Change floppy:
-            <input type="file">
-        </label>
-
-        <label id="change_cdrom" style="display: none">
-            Change CD:
-            <input type="file">
-        </label>
-
-        <br>
-
     </div>
     <pre style="display: none" id="loading"></pre>
 </div>
