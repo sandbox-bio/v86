@@ -59,9 +59,9 @@ apt-get install -y jq tree seqtk fasttree kalign bedtools minimap2 samtools bcft
 git clone --recursive --branch ${VERSION_HTSLIB} https://github.com/samtools/htslib.git && cd htslib && \
     autoreconf -i && ./configure && make && make install && cd -
 
-# fastp
+# fastp (using older version since latest needs libisal, which gives 32-bit errors)
 git clone --branch ${VERSION_FASTP} https://github.com/OpenGene/fastp.git && cd fastp && \
-    make && make install && cd -
+    make LD_FLAGS="-lz -lpthread -static" && make install && cd -
 
 # lsd2
 git clone --branch ${VERSION_LSD2} https://github.com/tothuhien/lsd2.git && cd lsd2/src && \
@@ -89,7 +89,7 @@ ENV VERSION_CSVTK=v0.27.2
 RUN <<SANDBOXBIO_V2
 
 # Install available tools through package registry
-apt-get install -y jellyfish seqkit freebayes kraken2 lumpy-sv mummer sniffles bioawk
+apt-get install -y jellyfish seqkit freebayes kraken2 lumpy-sv mummer sniffles bioawk mosdepth multiqc
 
 # ViralMSA
 apt-get install -y python3-biopython
@@ -107,7 +107,6 @@ git clone --branch ${VERSION_KALLISTO} https://github.com/pachterlab/kallisto.gi
 SANDBOXBIO_V2
 
 
-
 # ------------------------------------------------------------------------------
 # Setup
 # ------------------------------------------------------------------------------
@@ -122,11 +121,12 @@ COPY getty-autologin-serial.conf /etc/systemd/system/serial-getty@ttyS0.service.
 COPY logind.conf /etc/systemd/logind.conf
 COPY boot-9p /etc/initramfs-tools/scripts/boot-9p
 
-# This needs to be commented out in order to boot from hdd
+# FIXME: Need to install "multiqc" after apt-get remove, otherwise it gets deleted
 RUN printf '%s\n' 9p 9pnet 9pnet_virtio virtio virtio_ring virtio_pci | tee -a /etc/initramfs-tools/modules && \
     echo 'BOOT=boot-9p' | tee -a /etc/initramfs-tools/initramfs.conf && \
     update-initramfs -u && \
-    apt-get remove -y gcc g++ make cmake automake autoconf meson ninja-build build-essential python3-pip libbz2-dev liblzma-dev libncurses5-dev zlib1g-dev libcurl4-gnutls-dev libssl-dev libc6-dev autotools-dev libtool && \
+    apt-get remove --purge -y gcc gcc-12 g++ make cmake automake autoconf build-essential libbz2-dev liblzma-dev libncurses5-dev zlib1g-dev libcurl4-gnutls-dev libssl-dev libc6-dev autotools-dev libtool python3-pip && \
+    apt-get install -y multiqc && multiqc --version && \
     apt-get --yes clean && \
     rm -r /var/lib/apt/lists/* && \
     rm /var/log/*.log /var/log/lastlog /var/log/wtmp /var/log/apt/*.log /var/log/apt/*.xz
