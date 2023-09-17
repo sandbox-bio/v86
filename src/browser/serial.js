@@ -225,9 +225,9 @@ function SerialAdapterXtermJS(element, bus)
 
     var term = this.term = new window["Terminal"]({
         cursorBlink: true,
-        bellStyle: false
+        bellStyle: false,
+        "logLevel": "off",
     });
-    term["setOption"]("logLevel", "off");
 
     const on_data_disposable = term["onData"](function(data) {
         for(let i = 0; i < data.length; i++)

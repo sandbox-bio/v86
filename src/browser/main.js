@@ -101,6 +101,29 @@
 
     function onload()
     {
+        // Load previously entered options via the local storage
+        const elementsToRestore = ['memory_size', 'video_memory_size', 'networking_proxy', 'disable_audio', 'enable_acpi', 'boot_order'];
+        for (const elementId of elementsToRestore)
+        {
+            const savedValue = window.localStorage.getItem(elementId);
+          
+            if (savedValue !== null)
+            {
+                const element = document.getElementById(elementId);
+                if (element)
+                {
+                    if(element.type === 'checkbox')
+                    {
+                        element.checked = savedValue === 'true' ? true : false;
+                    }
+                    else
+                    {
+                        element.value = savedValue;
+                    }
+                }
+            }
+        }
+
         if(!window.WebAssembly)
         {
             alert("Your browser is not supported because it doesn't support WebAssembly");
@@ -116,6 +139,22 @@
 
         $("start_emulation").onclick = function()
         {
+            // Save entered options into the local storage
+            for (const elementId of elementsToRestore)
+            {
+                const element = document.getElementById(elementId);
+                if(element){
+                    if(element.tagName === 'SELECT' || element.type !== 'checkbox')
+                    {
+                        window.localStorage.setItem(elementId, element.value);
+                    }
+                    else
+                    {
+                        window.localStorage.setItem(elementId, element.checked);
+                    }
+                }
+            }
+
             $("boot_options").style.display = "none";
             set_profile("custom");
 
@@ -175,11 +214,6 @@
 
         const query_args = get_query_arguments();
         const host = query_args["cdn"] || (ON_LOCALHOST ? "images/" : "//k.copy.sh/");
-        const disable_jit = parseInt(query_args["jit_disable"], 10);
-        if(disable_jit > 0)
-        {
-            settings.force_disable_jit = disable_jit;
-        }
 
         // Abandonware OS images are from https://winworldpc.com/library/operating-systems
         var oses = [
@@ -355,6 +389,15 @@
                 name: "FreeDOS",
             },
             {
+                id: "freegem",
+                hda: {
+                    url: host + "freegem.bin",
+                    size: 209715200,
+                    async: true,
+                },
+                name: "Freedos with FreeGEM",
+            },
+            {
                 id: "psychdos",
                 hda: {
                     url: host + "psychdos.img",
@@ -422,6 +465,34 @@
                 name: "Buildroot Linux",
                 filesystem: {},
                 cmdline: "tsc=reliable mitigations=off random.trust_cpu=on",
+            },
+            {
+                id: "basiclinux",
+                hda: {
+                    url: host + "bl3-5.img",
+                    size: 104857600,
+                    async: false,
+                },
+                name: "BasicLinux",
+            },
+            {
+                id: "xpud",
+                cdrom: {
+                    url: host + "xpud-0.9.2.iso",
+                    size: 67108864,
+                    async: false,
+                },
+                name: "xPUD",
+                memory_size: 256 * 1024 * 1024,
+            },
+            {
+                id: "elks",
+                hda: {
+                    url: host + "elks-hd32-fat.img",
+                    size: 32514048,
+                    async: false,
+                },
+                name: "ELKS",
             },
             {
                 id: "nodeos",
@@ -947,6 +1018,11 @@
             document.head.appendChild(link);
         }
 
+        if(query_args["disable_jit"])
+        {
+            settings.disable_jit = true;
+        }
+
         if(query_args["use_bochs_bios"])
         {
             settings.use_bochs_bios = true;
@@ -1340,6 +1416,7 @@
             "bzimage_initrd_from_filesystem": settings.bzimage_initrd_from_filesystem,
 
             "acpi": enable_acpi,
+            "disable_jit": settings.disable_jit,
             "initial_state": settings.initial_state,
             "filesystem": settings.filesystem || {},
             "disable_speaker": disable_audio,
