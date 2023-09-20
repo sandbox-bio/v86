@@ -236,9 +236,9 @@ function SerialAdapterXtermJS(element, bus)
         }
     });
 
-    bus.register("serial0-output-char", function(chr)
+    bus.register("serial0-output-byte", function(out_byte)
     {
-        term.write(chr);
+        term.write(new Uint8Array([out_byte]));
     }, this);
 
     this.destroy = function() {
