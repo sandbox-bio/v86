@@ -192,6 +192,7 @@ build/v86.wasm: $(RUST_FILES) build/softfloat.o build/zstddeclib.o Cargo.toml
 	cp build/wasm32-unknown-unknown/release/v86.wasm build/v86.wasm
 	-$(WASM_OPT) && wasm-opt -O2 --strip-debug build/v86.wasm -o build/v86.wasm
 	BLOCK_SIZE=K ls -l build/v86.wasm
+	cp build/v86.wasm ../sandbox.bio/static/v86/
 
 build/v86-debug.wasm: $(RUST_FILES) build/softfloat.o build/zstddeclib.o Cargo.toml
 	mkdir -p build/
@@ -233,6 +234,7 @@ build/zstddeclib.o: lib/zstd/zstddeclib.c
 
 clean:
 	-rm build/libv86.js
+	-rm build/libv86.sandbox.js
 	-rm build/libv86-debug.js
 	-rm build/v86_all.js
 	-rm build/v86.wasm
@@ -352,7 +354,7 @@ build/libwabt.js:
 	rm build/1.0.6.zip
 
 build/xterm.js:
-	curl https://cdn.jsdelivr.net/npm/xterm@5.2.1/lib/xterm.min.js > build/xterm.js
-	curl https://cdn.jsdelivr.net/npm/xterm@5.2.1/lib/xterm.js.map > build/xterm.js.map
-	curl https://cdn.jsdelivr.net/npm/xterm@5.2.1/css/xterm.css > build/xterm.css
+	curl https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js > build/xterm.js
+	curl https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js.map > build/xterm.js.map
+	curl https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css > build/xterm.css
 	cp build/xterm.js{,.map} ../sandbox.bio/static/v86/
