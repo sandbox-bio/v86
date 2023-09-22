@@ -342,14 +342,11 @@ UART.prototype.write_data = function(out_byte)
 
     this.ThrowInterrupt(UART_IIR_THRI);
 
-    var char = String.fromCharCode(out_byte);
-
-    // this.bus.send("serial" + this.com + "-output-char", char);
-    // Otherwise, xterm.js won't display multi-byte UTF-8 characters properly (https://github.com/copy/v86/issues/927)
     this.bus.send("serial" + this.com + "-output-byte", out_byte);
 
     if(DEBUG)
     {
+        var char = String.fromCharCode(out_byte);
         this.current_line += char;
 
         if(char === "\n")

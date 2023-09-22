@@ -106,6 +106,8 @@ RUN git clone --recursive --branch 8-ef4e960 https://github.com/steineggerlab/fo
     mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=RELEASE -DHAVE_TESTS=0 -DREQUIRE_OPENMP=0 -DNATIVE_ARCH=0 -DHAVE_SSE2=1 .. && \
     make && make install 
 
+# Install ifconfig for networking support
+RUN apt-get install -y net-tools
 
 
 # ------------------------------------------------------------------------------

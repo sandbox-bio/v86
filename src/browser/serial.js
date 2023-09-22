@@ -17,8 +17,9 @@ function SerialAdapter(element, bus)
     this.last_update = 0;
 
 
-    this.bus.register("serial0-output-char", function(chr)
+    this.bus.register("serial0-output-byte", function(byte)
     {
+        var chr = String.fromCharCode(byte);
         this.show_char(chr);
     }, this);
 
@@ -204,8 +205,9 @@ function SerialRecordingAdapter(bus)
     var serial = this;
     this.text = "";
 
-    bus.register("serial0-output-char", function(chr)
+    bus.register("serial0-output-byte", function(byte)
     {
+        var chr = String.fromCharCode(byte);
         this.text += chr;
     }, this);
 }
@@ -236,9 +238,10 @@ function SerialAdapterXtermJS(element, bus)
         }
     });
 
-    bus.register("serial0-output-byte", function(out_byte)
+    bus.register("serial0-output-byte", function(byte)
     {
-        term.write(new Uint8Array([out_byte]));
+        var chr = new Uint8Array([byte]);
+        term.write(chr);
     }, this);
 
     this.destroy = function() {

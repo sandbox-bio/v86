@@ -24,7 +24,7 @@ var emulator = new V86({
     bios: { url: path.join(V86_ROOT, "/bios/seabios.bin") },
     vga_bios: { url: path.join(V86_ROOT, "/bios/vgabios.bin") },
     autostart: true,
-    memory_size: 512 * 1024 * 1024,
+    memory_size: 1024 * 1024 * 1024,
     vga_memory_size: 8 * 1024 * 1024,
     network_relay_url: "<UNUSED>",
     bzimage_initrd_from_filesystem: true,
@@ -48,8 +48,9 @@ var boot_start = Date.now();
 var serial_text = "";
 let booted = false;
 
-emulator.add_listener("serial0-output-char", function(c)
+emulator.add_listener("serial0-output-byte", function(byte)
 {
+    var c = String.fromCharCode(byte);
     process.stdout.write(c);
 
     serial_text += c;
