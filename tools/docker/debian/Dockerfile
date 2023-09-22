@@ -109,6 +109,15 @@ RUN git clone --recursive --branch 8-ef4e960 https://github.com/steineggerlab/fo
 # Install ifconfig for networking support
 RUN apt-get install -y net-tools
 
+# ------------------------------------------------------------------------------
+# Custom sandbox.bio commands
+# ------------------------------------------------------------------------------
+
+COPY sandbox_bio_open.sh /root/build/open
+COPY sandbox_bio_download.sh /root/build/download
+RUN install /root/build/open ${INSTALL_DIR}/open && \
+    install /root/build/download ${INSTALL_DIR}/download
+
 
 # ------------------------------------------------------------------------------
 # Setup

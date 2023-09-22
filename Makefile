@@ -150,7 +150,7 @@ build/libv86.sandbox.js: $(CLOSURE) src/*.js lib/*.js src/browser/*.js
 		$(CLOSURE_FLAGS)\
 		--compilation_level SIMPLE\
 		--jscomp_off=missingProperties\
-		--output_wrapper 'function require(){};%output% export { V86Starter }'\
+		--output_wrapper 'function require(){};%output% export { V86 }'\
 		--js $(CORE_FILES)\
 		--js $(BROWSER_FILES)\
 		--js $(LIB_FILES)
