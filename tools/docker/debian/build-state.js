@@ -28,8 +28,9 @@ var emulator = new V86({
     vga_memory_size: 8 * 1024 * 1024,
     network_relay_url: "<UNUSED>",
     bzimage_initrd_from_filesystem: true,
-    // enable communication b/w JavaScript and v86 on serial port 1
+    // enable communication b/w JavaScript and v86 on serial port 1 (input) and 2 (output)
     uart1: true,
+    uart2: true,
     // remove unneeded security features since running in a sandbox (spectre_v2=off, pti=off)
     // make state file half the size by setting "page_poison=on", i.e. when free memory, Linux doesn't overwrite with random bytes
     cmdline: "rw init=/bin/systemd root=host9p console=ttyS0 spectre_v2=off pti=off page_poison=on",

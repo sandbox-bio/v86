@@ -115,8 +115,10 @@ RUN apt-get install -y net-tools
 
 COPY sandbox_bio_open.sh /root/build/open
 COPY sandbox_bio_download.sh /root/build/download
+COPY sandbox_bio_curl.sh /root/build/curl
 RUN install /root/build/open ${INSTALL_DIR}/open && \
-    install /root/build/download ${INSTALL_DIR}/download
+    install /root/build/download ${INSTALL_DIR}/download && \
+    install /root/build/curl ${INSTALL_DIR}/curl
 
 
 # ------------------------------------------------------------------------------
