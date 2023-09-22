@@ -26,11 +26,6 @@ function NetworkAdapter(url, bus)
 
     this.bus.register("net0-send", function(data)
     {
-        const abc = Uint8Array([51,51,0,0,0,2,0,34,21,113,89,141,134,221,96,0,0,0,0,16,58,255,254,128,0,0,0,0,0,0,2,34,21,255,254,113,89,141,255,2,0,0,0,0,0,0,0,0,0,0,0,0,0,2,133,0,156,237,0,0])
-        if(data.length === abc.length) {
-            this.bus.send("net0-receive", new Uint8Array(data));
-            console.log("net0-send", data)
-        }
         this.send(data);
     }, this);
 }
