@@ -52,7 +52,7 @@ ENV PATH=/usr/local/cargo/bin:$PATH
 # Bioinformatics tools - sandbox.bio v1
 # ------------------------------------------------------------------------------
 
-RUN apt-get install -y jq tree seqtk fasttree kalign bedtools minimap2 samtools bcftools ivar
+RUN apt-get install -y jq tree seqtk fasttree kalign bedtools samtools bcftools ivar
 
 # Htslib
 RUN git clone --recursive --branch 1.18 https://github.com/samtools/htslib.git && cd htslib && \
@@ -73,6 +73,10 @@ RUN git clone --branch v.1.0.11 https://github.com/veg/tn93.git && cd tn93 && \
 # Bowtie2
 RUN git clone --branch v2.5.1 https://github.com/BenLangmead/bowtie2.git && cd bowtie2 && \
     sed -i "s/BITS := 32/BITS := 64/" Makefile && make SSE_FLAG="-msse2" && make install && cd -
+
+# Minimap2 (manual install because "apt-get install -y minimap2" gives opcode errors)
+RUN cd /root && git clone --recursive --branch v2.26 https://github.com/lh3/minimap2.git && cd minimap2 && \
+    make && install minimap2 ${INSTALL_DIR} && cd -
 
 
 # ------------------------------------------------------------------------------
@@ -106,8 +110,6 @@ RUN git clone --recursive --branch 8-ef4e960 https://github.com/steineggerlab/fo
     mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=RELEASE -DHAVE_TESTS=0 -DREQUIRE_OPENMP=0 -DNATIVE_ARCH=0 -DHAVE_SSE2=1 .. && \
     make && make install 
 
-# Install ifconfig for networking support
-RUN apt-get install -y net-tools
 
 # ------------------------------------------------------------------------------
 # Custom sandbox.bio commands
