@@ -31,8 +31,8 @@ var emulator = new V86({
     // enable communication b/w JavaScript and v86 on serial port 1 (input) and 2 (output)
     uart1: true,
     uart2: true,
-    // remove unneeded security features since running in a sandbox (spectre_v2=off, pti=off)
-    // make state file half the size by setting "page_poison=on", i.e. when free memory, Linux doesn't overwrite with random bytes
+    // Remove unneeded security features since running in a sandbox (spectre_v2=off, pti=off).
+    // Make state file half the size by setting "page_poison=on", i.e. when free memory, Linux doesn't overwrite with random bytes.
     cmdline: "rw init=/bin/systemd root=host9p console=ttyS0 spectre_v2=off pti=off page_poison=on",
     filesystem: {
         basefs: {
@@ -61,8 +61,9 @@ emulator.add_listener("serial0-output-byte", function(byte)
         console.error("\nBooted in %d", (Date.now() - boot_start) / 1000);
         booted = true;
 
-        // sync and drop caches: Makes it safer to change the filesystem as fewer files are rendered
-        emulator.serial0_send("sync;echo 3 >/proc/sys/vm/drop_caches;cd ~/tutorial\n");
+        // Sync and drop caches: Makes it safer to change the filesystem as fewer files are rendered
+        // Disable kernel logging with dmesg (drop_caches outputs things to ttyS0 even if run it on another port)
+        emulator.serial0_send("dmesg -n 1; sync; echo 3 >/proc/sys/vm/drop_caches; cd ~/tutorial\n");
 
         setTimeout(async function ()
             {
