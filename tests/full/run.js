@@ -443,7 +443,7 @@ if(cluster.isMaster)
             name: "FreeBSD",
             skip_if_disk_image_missing: true,
             timeout: 15 * 60,
-            hda: root_path + "/images/internal/freebsd/freebsd.img",
+            hda: root_path + "/images/freebsd.img",
             expected_texts: [
                 "FreeBSD/i386 (nyu) (ttyv0)",
                 "root@nyu:~ #",
@@ -592,7 +592,7 @@ if(cluster.isMaster)
         },
         {
             name: "9front",
-            failure_allowed: true,
+            use_small_bios: true, // has issues with 256k bios
             skip_if_disk_image_missing: true,
             acpi: true,
             timeout: 5 * 60,
@@ -729,7 +729,7 @@ if(cluster.isMaster)
         {
             name: "Redox",
             skip_if_disk_image_missing: true,
-            timeout: 2 * 60,
+            timeout: 5 * 60,
             memory_size: 512 * 1024 * 1024,
             acpi: true,
             hda: root_path + "/images/redox_demo_i686_2022-11-26_643_harddrive.img",
@@ -756,6 +756,15 @@ if(cluster.isMaster)
             hda: root_path + "/images/android_x86_nonsse3_4.4r1_20140904.iso",
             expect_graphical_mode: true,
             expect_graphical_size: [800, 600],
+            expect_mouse_registered: true,
+        },
+        {
+            name: "Syllable",
+            skip_if_disk_image_missing: true,
+            timeout: 60,
+            memory_size: 512 * 1024 * 1024,
+            hda: root_path + "/images/syllable-destop-0.6.7.img",
+            expect_graphical_mode: true,
             expect_mouse_registered: true,
         },
         {
@@ -950,7 +959,7 @@ function run_test(test, done)
         var bios = root_path + "/bios/bochs-bios.bin";
         var vga_bios = root_path + "/bios/bochs-vgabios.bin";
     }
-    else if(TEST_RELEASE_BUILD)
+    else if(test.use_small_bios || TEST_RELEASE_BUILD)
     {
         var bios = root_path + "/bios/seabios.bin";
         var vga_bios = root_path + "/bios/vgabios.bin";
@@ -995,6 +1004,7 @@ function run_test(test, done)
     settings.acpi = test.acpi;
     settings.boot_order = test.boot_order;
     settings.cpuid_level = test.cpuid_level;
+    settings.disable_jit = +process.env.DISABLE_JIT;
 
     if(test.expected_texts)
     {

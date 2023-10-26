@@ -62,9 +62,10 @@ CLOSURE_FLAGS=\
 		--jscomp_error unknownDefines\
 		--jscomp_error visibility\
 		--use_types_for_optimization\
+		--assume_function_wrapper\
 		--summary_detail_level 3\
-		--language_in ECMASCRIPT_2017\
-		--language_out ECMASCRIPT_2017
+		--language_in ECMASCRIPT_2020\
+		--language_out ECMASCRIPT_2020
 
 CARGO_FLAGS_SAFE=\
 		--target wasm32-unknown-unknown \
@@ -75,7 +76,7 @@ CARGO_FLAGS_SAFE=\
 		-C link-args="build/zstddeclib.o" \
 		--verbose
 
-CARGO_FLAGS=$(CARGO_FLAGS_SAFE) -C target-feature=+bulk-memory
+CARGO_FLAGS=$(CARGO_FLAGS_SAFE) -C target-feature=+bulk-memory -C target-feature=+multivalue -C target-feature=+simd128
 
 CORE_FILES=const.js config.js io.js main.js lib.js buffer.js ide.js pci.js floppy.js \
 	   memory.js dma.js pit.js vga.js ps2.js pic.js rtc.js uart.js hpet.js \
@@ -279,12 +280,12 @@ tests-release: build/libv86.js build/v86.wasm build/integration-test-fs/fs.json
 	TEST_RELEASE_BUILD=1 ./tests/full/run.js
 
 nasmtests: all-debug
-	$(MAKE) -C $(NASM_TEST_DIR) all
+	$(NASM_TEST_DIR)/create_tests.js
 	$(NASM_TEST_DIR)/gen_fixtures.js
 	$(NASM_TEST_DIR)/run.js
 
 nasmtests-force-jit: all-debug
-	$(MAKE) -C $(NASM_TEST_DIR) all
+	$(NASM_TEST_DIR)/create_tests.js
 	$(NASM_TEST_DIR)/gen_fixtures.js
 	$(NASM_TEST_DIR)/run.js --force-jit
 
@@ -341,7 +342,7 @@ jshint:
 	jshint --config=./.jshint.json src tests gen lib
 
 rustfmt: $(RUST_FILES)
-	cargo fmt --all -- --check
+	cargo +nightly fmt --all -- --check
 
 build/capstone-x86.min.js:
 	mkdir -p build

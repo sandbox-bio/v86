@@ -99,6 +99,16 @@
         return document.getElementById(id);
     }
 
+    // these values are stored in localStorage
+    const elements_to_restore = [
+        "memory_size",
+        "video_memory_size",
+        "networking_proxy",
+        "disable_audio",
+        "enable_acpi",
+        "boot_order",
+    ];
+
     function onload()
     {
         if(!window.WebAssembly)
@@ -107,34 +117,6 @@
             return;
         }
 
-        const elements_to_restore = ["memory_size", "video_memory_size", "networking_proxy", "disable_audio", "enable_acpi", "boot_order"];
-
-        for(const id of elements_to_restore)
-        {
-            const saved_value = window.localStorage.getItem(id);
-
-            if(saved_value)
-            {
-                const element = $(id);
-                if(element)
-                {
-                    if(element.type === "checkbox")
-                    {
-                        element.checked = saved_value === "true" ? true : false;
-                    }
-                    else
-                    {
-                        element.value = saved_value;
-                    }
-                }
-            }
-        }
-
-        const script = document.createElement("script");
-        script.src = "build/xterm.js";
-        script.async = true;
-        document.body.appendChild(script);
-
         var settings = {};
 
         $("start_emulation").onclick = function()
@@ -142,7 +124,7 @@
             // Save entered options into the local storage
             for(const id of elements_to_restore)
             {
-                const element = document.getElementById(id);
+                const element = $(id);
                 if(element)
                 {
                     if(element.tagName === "SELECT" || element.type !== "checkbox")
@@ -210,7 +192,7 @@
 
         if(DEBUG)
         {
-            debug_onload(settings);
+            debug_onload();
         }
 
         const query_args = get_query_arguments();
@@ -971,6 +953,19 @@
                 acpi: true,
                 homepage: "http://www.freenos.org/",
             },
+            {
+                id: "syllable",
+                memory_size: 512 * 1024 * 1024,
+                hda: {
+                    url: host + "syllable-destop-0.6.7/.img",
+                    async: true,
+                    size: 500 * 1024 * 1024,
+                    fixed_chunk_size: 512 * 1024,
+                    use_parts: true,
+                },
+                name: "Syllable",
+                homepage: "http://syllable.metaproject.frl/",
+            },
         ];
 
         if(DEBUG)
@@ -1018,6 +1013,11 @@
             link.href = "build/v86.wasm";
             document.head.appendChild(link);
         }
+
+        const link = document.createElement("link");
+        link.rel = "prefetch";
+        link.href = "build/xterm.js";
+        document.head.appendChild(link);
 
         if(query_args["disable_jit"])
         {
@@ -1104,6 +1104,7 @@
                 $("boot_options").style.display = "none";
 
                 start_emulation(settings, done);
+                return;
             }
         }
         else if(/^[a-zA-Z0-9\-_]+\/[a-zA-Z0-9\-_]+$/g.test(profile))
@@ -1113,6 +1114,7 @@
             const base = "https://v86-user-images.b-cdn.net/" + profile;
 
             fetch(base + "/profile.json")
+                .catch(e => alert("Profile not found: " + profile))
                 .then(response => response.json())
                 .then(p => {
                     function handle_image(o)
@@ -1134,8 +1136,30 @@
                         bzimage: handle_image(p["bzimage"]),
                         initrd: handle_image(p["initrd"]),
                     });
-                })
-                .catch(e => alert("Profile not found: " + profile));
+                });
+
+            return;
+        }
+
+        for(const id of elements_to_restore)
+        {
+            const saved_value = window.localStorage.getItem(id);
+
+            if(saved_value)
+            {
+                const element = $(id);
+                if(element)
+                {
+                    if(element.type === "checkbox")
+                    {
+                        element.checked = saved_value === "true" ? true : false;
+                    }
+                    else
+                    {
+                        element.value = saved_value;
+                    }
+                }
+            }
         }
 
         function start_profile(infos)
@@ -1224,7 +1248,7 @@
         }
     }
 
-    function debug_onload(settings)
+    function debug_onload()
     {
         // called on window.onload, in debug mode
 
@@ -1360,8 +1384,8 @@
         }
 
         const networking_proxy = settings.networking_proxy === undefined ? $("networking_proxy").value : settings.networking_proxy;
-        const disable_audio = settings.audio === undefined ? $("disable_audio").checked : !settings.audio;
-        const enable_acpi = settings.acpi === undefined ? $("enable_acpi").checked : settings.acpi;
+        const disable_audio = $("disable_audio").checked || !settings.audio;
+        const enable_acpi = !settings.initial_state && settings.acpi === undefined ? $("enable_acpi").checked : settings.acpi;
 
         /** @const */
         var BIOSPATH = "bios/";
@@ -1392,39 +1416,38 @@
         }
 
         var emulator = new V86({
-            "memory_size": memory_size,
-            "vga_memory_size": vga_memory_size,
+            memory_size: memory_size,
+            vga_memory_size: vga_memory_size,
 
-            "screen_container": $("screen_container"),
-            "serial_container_xtermjs": $("terminal"),
+            screen_container: $("screen_container"),
 
-            "boot_order": settings.boot_order || parseInt($("boot_order").value, 16) || 0,
+            boot_order: settings.boot_order || parseInt($("boot_order").value, 16) || 0,
 
-            "network_relay_url": ON_LOCALHOST ? "ws://localhost:8080/" : networking_proxy,
+            network_relay_url: ON_LOCALHOST ? "ws://localhost:8080/" : networking_proxy,
 
-            "bios": bios,
-            "vga_bios": vga_bios,
+            bios: bios,
+            vga_bios: vga_bios,
 
-            "fda": settings.fda,
-            "hda": settings.hda,
-            "hdb": settings.hdb,
-            "cdrom": settings.cdrom,
+            fda: settings.fda,
+            hda: settings.hda,
+            hdb: settings.hdb,
+            cdrom: settings.cdrom,
 
-            "multiboot": settings.multiboot,
-            "bzimage": settings.bzimage,
-            "initrd": settings.initrd,
-            "cmdline": settings.cmdline,
-            "bzimage_initrd_from_filesystem": settings.bzimage_initrd_from_filesystem,
+            multiboot: settings.multiboot,
+            bzimage: settings.bzimage,
+            initrd: settings.initrd,
+            cmdline: settings.cmdline,
+            bzimage_initrd_from_filesystem: settings.bzimage_initrd_from_filesystem,
 
-            "acpi": enable_acpi,
-            "disable_jit": settings.disable_jit,
-            "initial_state": settings.initial_state,
-            "filesystem": settings.filesystem || {},
-            "disable_speaker": disable_audio,
-            "mac_address_translation": settings.mac_address_translation,
-            "cpuid_level": settings.cpuid_level,
+            acpi: enable_acpi,
+            disable_jit: settings.disable_jit,
+            initial_state: settings.initial_state,
+            filesystem: settings.filesystem || {},
+            disable_speaker: disable_audio,
+            mac_address_translation: settings.mac_address_translation,
+            cpuid_level: settings.cpuid_level,
 
-            "autostart": true,
+            autostart: true,
         });
 
         if(DEBUG) window["emulator"] = emulator;
@@ -1661,6 +1684,8 @@
             write_sectors: 0,
         };
 
+        $("ide_type").textContent = emulator.disk_images.cdrom ? " (CD-ROM)" : " (hard disk)";
+
         emulator.add_listener("ide-read-start", function()
         {
             $("info_storage").style.display = "block";
@@ -1737,13 +1762,13 @@
             $("reset").blur();
         };
 
-        add_image_download_button(settings.hda, "hda");
-        add_image_download_button(settings.hdb, "hdb");
-        add_image_download_button(settings.fda, "fda");
-        add_image_download_button(settings.fdb, "fdb");
-        add_image_download_button(settings.cdrom, "cdrom");
+        add_image_download_button(settings.hda, emulator.disk_images.hda, "hda");
+        add_image_download_button(settings.hdb, emulator.disk_images.hdb, "hdb");
+        add_image_download_button(settings.fda, emulator.disk_images.fda, "fda");
+        add_image_download_button(settings.fdb, emulator.disk_images.fdb, "fdb");
+        add_image_download_button(settings.cdrom, emulator.disk_images.cdrom, "cdrom");
 
-        function add_image_download_button(obj, type)
+        function add_image_download_button(obj, buffer, type)
         {
             var elem = $("get_" + type + "_image");
 
@@ -1755,7 +1780,6 @@
 
             elem.onclick = function(e)
             {
-                let buffer = emulator.disk_images[type];
                 let filename = buffer.file && buffer.file.name || (settings.id + (type === "cdrom" ? ".iso" : ".img"));
 
                 if(buffer.get_as_file)
@@ -2065,6 +2089,15 @@
                 window.onbeforeunload = null;
             }
         }
+
+        const script = document.createElement("script");
+        script.src = "build/xterm.js";
+        script.async = true;
+        script.onload = function()
+        {
+            emulator.set_serial_container_xtermjs($("terminal"));
+        };
+        document.body.appendChild(script);
     }
 
     function init_filesystem_panel(emulator)
