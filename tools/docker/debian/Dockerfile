@@ -32,6 +32,9 @@ apt update && \
     systemctl disable dhcpcd.service && \
     echo "tmpfs /tmp tmpfs nodev,nosuid 0 0" >> /etc/fstab
 
+# Re-enable man pages (not there by default since using a slim version of the Debian Docker image)
+sed -i "s|path-exclude /usr/share/man/\*||" /etc/dpkg/dpkg.cfg.d/docker
+
 # General utilities
 apt --yes --no-install-recommends install vim nano less curl git man-db \
     ca-certificates make cmake autoconf libbz2-dev liblzma-dev libncurses5-dev \
@@ -110,6 +113,10 @@ RUN git clone --recursive --branch 8-ef4e960 https://github.com/steineggerlab/fo
     mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=RELEASE -DHAVE_TESTS=0 -DREQUIRE_OPENMP=0 -DNATIVE_ARCH=0 -DHAVE_SSE2=1 .. && \
     make && make install 
 
+# ViralConsensus
+RUN git clone --branch 0.0.4 https://github.com/niemasd/ViralConsensus.git && cd ViralConsensus && \
+    make && install viral_consensus ${INSTALL_DIR}
+
 
 # ------------------------------------------------------------------------------
 # Custom sandbox.bio commands
@@ -127,6 +134,10 @@ RUN install /root/build/open ${INSTALL_DIR}/open && \
 # Setup
 # ------------------------------------------------------------------------------
 
+# Fix manpage issue
+RUN apt-get install -y --reinstall coreutils grep
+
+# Setup
 WORKDIR /root/
 RUN rm -rf /root/build && \
     mkdir /root/tutorial && \
