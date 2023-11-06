@@ -117,6 +117,10 @@ RUN git clone --recursive --branch 8-ef4e960 https://github.com/steineggerlab/fo
 RUN git clone --branch 0.0.4 https://github.com/niemasd/ViralConsensus.git && cd ViralConsensus && \
     make && install viral_consensus ${INSTALL_DIR}
 
+# HyPhy
+RUN git clone --branch 2.5.55 https://github.com/veg/hyphy.git && cd hyphy && \
+    cmake . && make install
+
 
 # ------------------------------------------------------------------------------
 # Custom sandbox.bio commands
@@ -152,7 +156,8 @@ RUN printf '%s\n' 9p 9pnet 9pnet_virtio virtio virtio_ring virtio_pci | tee -a /
     echo 'BOOT=boot-9p' | tee -a /etc/initramfs-tools/initramfs.conf && \
     update-initramfs -u && \
     rustup self uninstall -y && \
-    apt-get remove --purge -y gcc gcc-12 g++ make cmake automake autoconf build-essential libbz2-dev liblzma-dev libncurses5-dev zlib1g-dev libcurl4-gnutls-dev libssl-dev libc6-dev autotools-dev libtool python3-pip && \
+    apt-get remove --purge -y gcc gcc-12 g++ make cmake automake autoconf build-essential libbz2-dev liblzma-dev libncurses5-dev zlib1g-dev libcurl4-gnutls-dev libssl-dev libc6-dev autotools-dev libtool python3-pip pandoc && \
+    apt-get autoremove --purge -y && \
     apt-get --yes clean && \
     rm -r /var/lib/apt/lists/* && \
     rm /var/log/*.log /var/log/lastlog /var/log/wtmp /var/log/apt/*.log /var/log/apt/*.xz
