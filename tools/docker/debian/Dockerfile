@@ -55,31 +55,39 @@ ENV PATH=/usr/local/cargo/bin:$PATH
 # Bioinformatics tools - sandbox.bio v1
 # ------------------------------------------------------------------------------
 
-RUN apt-get install -y jq tree seqtk fasttree kalign bedtools samtools bcftools ivar
+RUN apt-get install -y jq tree seqtk fasttree kalign bedtools ivar
 
 # Htslib
 RUN git clone --recursive --branch 1.18 https://github.com/samtools/htslib.git && cd htslib && \
-    autoreconf -i && ./configure && make && make install && cd -
+    autoreconf -i && ./configure && make && make install
+
+# samtools (the apt-get version is 1.16)
+RUN git clone --recursive --branch 1.18 https://github.com/samtools/samtools.git && cd samtools && \
+    autoheader && autoconf -Wno-syntax && ./configure && make && make install
+
+# bcftools (the apt-get version is 1.16)
+RUN git clone --recursive --branch 1.18 https://github.com/samtools/bcftools.git && cd bcftools && \
+    make && make install
 
 # fastp (using older version since latest needs libisal, which gives 32-bit errors)
 RUN git clone --branch v0.20.1 https://github.com/OpenGene/fastp.git && cd fastp && \
-    make LD_FLAGS="-lz -lpthread -static" && make install && cd -
+    make LD_FLAGS="-lz -lpthread -static" && make install
 
 # lsd2
 RUN git clone --branch v.2.4.1 https://github.com/tothuhien/lsd2.git && cd lsd2/src && \
-    make && install lsd2 ${INSTALL_DIR} && cd -
+    make && install lsd2 ${INSTALL_DIR}
 
 # tn93
 RUN git clone --branch v.1.0.11 https://github.com/veg/tn93.git && cd tn93 && \
-    cmake . && make install && cd -
+    cmake . && make install
 
 # Bowtie2
 RUN git clone --branch v2.5.1 https://github.com/BenLangmead/bowtie2.git && cd bowtie2 && \
-    sed -i "s/BITS := 32/BITS := 64/" Makefile && make SSE_FLAG="-msse2" && make install && cd -
+    sed -i "s/BITS := 32/BITS := 64/" Makefile && make SSE_FLAG="-msse2" && make install
 
 # Minimap2 (manual install because "apt-get install -y minimap2" gives opcode errors)
 RUN cd /root && git clone --recursive --branch v2.26 https://github.com/lh3/minimap2.git && cd minimap2 && \
-    make && install minimap2 ${INSTALL_DIR} && cd -
+    make && install minimap2 ${INSTALL_DIR}
 
 
 # ------------------------------------------------------------------------------
