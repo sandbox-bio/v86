@@ -131,13 +131,23 @@ RUN git clone --branch 2.5.55 https://github.com/veg/hyphy.git && cd hyphy && \
 
 
 # ------------------------------------------------------------------------------
+# Utilities
+# ------------------------------------------------------------------------------
+
+RUN apt-get remove -y vim && \
+    apt-get install -y vim-tiny && \
+    install /usr/bin/vim.tiny ${INSTALL_DIR}/vim
+
+
+# ------------------------------------------------------------------------------
 # Custom sandbox.bio commands
 # ------------------------------------------------------------------------------
 
 COPY sandbox_bio_open.sh /root/build/open
 COPY sandbox_bio_download.sh /root/build/download
 COPY sandbox_bio_curl.sh /root/build/curl
-RUN install /root/build/open ${INSTALL_DIR}/open && \
+RUN apt-get remove -y curl && \
+    install /root/build/open ${INSTALL_DIR}/open && \
     install /root/build/download ${INSTALL_DIR}/download && \
     install /root/build/curl ${INSTALL_DIR}/curl
 
