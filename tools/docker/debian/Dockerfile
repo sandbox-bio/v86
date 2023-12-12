@@ -57,17 +57,20 @@ ENV PATH=/usr/local/cargo/bin:$PATH
 
 RUN apt-get install -y jq tree seqtk fasttree kalign bedtools ivar
 
-# Htslib
+# Htslib: disabled features that depend on the network; modified CFLAGS to remove "-g"
+RUN rm -rf htslib/ samtools/ bcftools/
 RUN git clone --recursive --branch 1.18 https://github.com/samtools/htslib.git && cd htslib && \
-    autoreconf -i && ./configure && make && make install
+    autoreconf -i && ./configure --disable-plugins --disable-libcurl --disable-gcs --disable-s3 && \
+    make CFLAGS="-O2 -fvisibility=hidden" && make install
 
-# samtools (the apt-get version is 1.16)
+# samtools: apt-get version is 1.16.1; modified CFLAGS to remove "-g"
 RUN git clone --recursive --branch 1.18 https://github.com/samtools/samtools.git && cd samtools && \
-    autoheader && autoconf -Wno-syntax && ./configure && make && make install
+    autoheader && autoconf -Wno-syntax && ./configure && make CFLAGS="-O2" && make install
 
-# bcftools (the apt-get version is 1.16)
+# bcftools (the apt-get version is 1.16; modified CFLAGS to remove "-g"
 RUN git clone --recursive --branch 1.18 https://github.com/samtools/bcftools.git && cd bcftools && \
-    make && make install
+    autoheader && autoconf && ./configure --disable-bcftools-plugins --disable-libgsl --disable-perl-filters && \
+    make CFLAGS="-O2" && make install
 
 # fastp (using older version since latest needs libisal, which gives 32-bit errors)
 RUN git clone --branch v0.20.1 https://github.com/OpenGene/fastp.git && cd fastp && \
