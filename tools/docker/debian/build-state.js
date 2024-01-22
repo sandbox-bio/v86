@@ -64,7 +64,7 @@ emulator.add_listener("serial0-output-byte", function(byte)
 
         // Sync and drop caches: Makes it safer to change the filesystem as fewer files are rendered
         // Disable kernel logging with dmesg (drop_caches outputs things to ttyS0 even if run it on another port)
-        emulator.serial0_send("dmesg -n 1; sync; echo 3 >/proc/sys/vm/drop_caches; cd ~/tutorial\n");
+        emulator.serial0_send("dmesg -n 1; sync; echo 3 >/proc/sys/vm/drop_caches; cd ~/tutorial; history -c\n");
 
         setTimeout(async function ()
             {

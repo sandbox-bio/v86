@@ -89,7 +89,8 @@ RUN git clone --branch v2.5.1 https://github.com/BenLangmead/bowtie2.git && cd b
     sed -i "s/BITS := 32/BITS := 64/" Makefile && make SSE_FLAG="-msse2" && make install
 
 # Minimap2 (manual install because "apt-get install -y minimap2" gives opcode errors)
-RUN cd /root && git clone --recursive --branch v2.26 https://github.com/lh3/minimap2.git && cd minimap2 && \
+RUN apt update
+RUN git clone --recursive --branch v2.26 https://github.com/lh3/minimap2.git && cd minimap2 && \
     make && install minimap2 ${INSTALL_DIR}
 
 
@@ -97,7 +98,7 @@ RUN cd /root && git clone --recursive --branch v2.26 https://github.com/lh3/mini
 # Bioinformatics tools - sandbox.bio v2
 # ------------------------------------------------------------------------------
 
-RUN apt-get install -y jellyfish seqkit freebayes kraken2 lumpy-sv mummer sniffles bioawk libvcflib-tools
+RUN apt-get install -y jellyfish seqkit kraken2 lumpy-sv mummer sniffles bioawk libvcflib-tools
 
 # ViralMSA
 RUN apt-get install -y python3-biopython && \
@@ -131,6 +132,13 @@ RUN git clone --branch 0.0.4 https://github.com/niemasd/ViralConsensus.git && cd
 # HyPhy
 RUN git clone --branch 2.5.55 https://github.com/veg/hyphy.git && cd hyphy && \
     cmake . && make install
+
+# FreeBayes: compile from source and compile into static (otherwise, get 20 .bin files)
+RUN apt-get remove -y freebayes
+RUN apt-get install -y meson ninja-build
+RUN git clone --branch v1.3.7 --recursive https://github.com/freebayes/freebayes.git && cd freebayes && \
+    meson build -Dstatic=true -Dprefer_system_deps=false --buildtype release && cd build && ninja && \
+    install freebayes ${INSTALL_DIR}/freebayes
 
 
 # ------------------------------------------------------------------------------
