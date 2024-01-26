@@ -84,6 +84,10 @@ RUN git clone --branch v.2.4.1 https://github.com/tothuhien/lsd2.git && cd lsd2/
 RUN git clone --branch v.1.0.11 https://github.com/veg/tn93.git && cd tn93 && \
     cmake . && make install
 
+# hyphy
+RUN git clone --branch v2.5.59 https://github.com/veg/hyphy.git && cd hyphy && \
+    cmake . && make install
+
 # Bowtie2
 RUN git clone --branch v2.5.1 https://github.com/BenLangmead/bowtie2.git && cd bowtie2 && \
     sed -i "s/BITS := 32/BITS := 64/" Makefile && make SSE_FLAG="-msse2" && make install
