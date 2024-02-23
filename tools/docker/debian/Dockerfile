@@ -55,10 +55,9 @@ ENV PATH=/usr/local/cargo/bin:$PATH
 # Bioinformatics tools - sandbox.bio v1
 # ------------------------------------------------------------------------------
 
-RUN apt-get install -y jq tree seqtk fasttree kalign bedtools ivar
+RUN apt-get install -y jq tree seqtk fasttree kalign bedtools
 
 # Htslib: disabled features that depend on the network; modified CFLAGS to remove "-g"
-RUN rm -rf htslib/ samtools/ bcftools/
 RUN git clone --recursive --branch 1.18 https://github.com/samtools/htslib.git && cd htslib && \
     autoreconf -i && ./configure --disable-plugins --disable-libcurl --disable-gcs --disable-s3 && \
     make CFLAGS="-O2 -fvisibility=hidden" && make install
@@ -76,14 +75,6 @@ RUN git clone --recursive --branch 1.18 https://github.com/samtools/bcftools.git
 RUN git clone --branch v0.20.1 https://github.com/OpenGene/fastp.git && cd fastp && \
     make LD_FLAGS="-lz -lpthread -static" && make install
 
-# lsd2
-RUN git clone --branch v.2.4.1 https://github.com/tothuhien/lsd2.git && cd lsd2/src && \
-    make && install lsd2 ${INSTALL_DIR}
-
-# tn93
-RUN git clone --branch v.1.0.11 https://github.com/veg/tn93.git && cd tn93 && \
-    cmake . && make install
-
 # Bowtie2
 RUN git clone --branch v2.5.1 https://github.com/BenLangmead/bowtie2.git && cd bowtie2 && \
     sed -i "s/BITS := 32/BITS := 64/" Makefile && make SSE_FLAG="-msse2" && make install
@@ -98,12 +89,7 @@ RUN git clone --recursive --branch v2.26 https://github.com/lh3/minimap2.git && 
 # Bioinformatics tools - sandbox.bio v2
 # ------------------------------------------------------------------------------
 
-RUN apt-get install -y jellyfish seqkit kraken2 lumpy-sv mummer sniffles bioawk libvcflib-tools
-
-# ViralMSA
-RUN apt-get install -y python3-biopython && \
-    curl -L -O "https://raw.githubusercontent.com/niemasd/ViralMSA/1.1.32/ViralMSA.py" && \
-    chmod a+x ViralMSA.py && install ViralMSA.py ${INSTALL_DIR}
+RUN apt-get install -y jellyfish seqkit kraken2 mummer
 
 # CSVtk
 RUN curl -L -O "https://github.com/shenwei356/csvtk/releases/download/v0.27.2/csvtk_linux_386.tar.gz" && \
@@ -130,12 +116,11 @@ RUN git clone --branch 0.0.4 https://github.com/niemasd/ViralConsensus.git && cd
     make && install viral_consensus ${INSTALL_DIR}
 
 # HyPhy
-RUN git clone --branch 2.5.55 https://github.com/veg/hyphy.git && cd hyphy && \
+RUN git clone --branch 2.5.59 https://github.com/veg/hyphy.git && cd hyphy && \
     cmake . && make install
 
 # FreeBayes: compile from source and compile into static (otherwise, get 20 .bin files)
-RUN apt-get remove -y freebayes
-RUN apt-get install -y meson ninja-build
+RUN apt-get install -y meson ninja-build pkg-config
 RUN git clone --branch v1.3.7 --recursive https://github.com/freebayes/freebayes.git && cd freebayes && \
     meson build -Dstatic=true -Dprefer_system_deps=false --buildtype release && cd build && ninja && \
     install freebayes ${INSTALL_DIR}/freebayes
@@ -185,7 +170,7 @@ RUN printf '%s\n' 9p 9pnet 9pnet_virtio virtio virtio_ring virtio_pci | tee -a /
     echo 'BOOT=boot-9p' | tee -a /etc/initramfs-tools/initramfs.conf && \
     update-initramfs -u && \
     rustup self uninstall -y && \
-    apt-get remove --purge -y gcc gcc-12 g++ make cmake automake autoconf build-essential libbz2-dev liblzma-dev libncurses5-dev zlib1g-dev libcurl4-gnutls-dev libssl-dev libc6-dev autotools-dev libtool python3-pip pandoc && \
+    apt-get remove --purge -y gcc gcc-12 g++ make cmake automake autoconf build-essential libbz2-dev liblzma-dev libncurses5-dev zlib1g-dev libcurl4-gnutls-dev libssl-dev libc6-dev autotools-dev libtool python3-pip pandoc meson ninja-build pkg-config && \
     apt-get autoremove --purge -y && \
     apt-get --yes clean && \
     rm -r /var/lib/apt/lists/* && \
