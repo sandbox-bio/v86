@@ -21,7 +21,7 @@ var
 /** @const */ LOG_SERIAL = 0x004000,
 /** @const */ LOG_DISK =   0x008000,
 /** @const */ LOG_RTC =    0x010000,
-/** @const */ LOG_HPET =   0x020000,
+// unused                  0x020000,
 /** @const */ LOG_ACPI =   0x040000,
 /** @const */ LOG_APIC =   0x080000,
 /** @const */ LOG_NET =    0x100000,
@@ -52,7 +52,6 @@ var LOG_NAMES = [
     [LOG_FLOPPY, "FLOP"],
     [LOG_SERIAL, "SERI"],
     [LOG_RTC, "RTC"],
-    [LOG_HPET, "HPET"],
     [LOG_ACPI, "ACPI"],
     [LOG_APIC, "APIC"],
     [LOG_NET, "NET"],
@@ -116,7 +115,9 @@ var
      */
     MMAP_BLOCK_BITS = 17,
     /** @const */
-    MMAP_BLOCK_SIZE = 1 << MMAP_BLOCK_BITS;
+    MMAP_BLOCK_SIZE = 1 << MMAP_BLOCK_BITS,
+    /** @const */
+    MMAP_MAX = 0x100000000;
 
 /** @const */
 var CR0_PG = 1 << 31;

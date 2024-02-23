@@ -174,9 +174,6 @@ function CPU(bus, wm, next_tick_immediately)
 
     if(DEBUG)
     {
-        this.do_many_cycles_count = 0;
-        this.do_many_cycles_total = 0;
-
         this.seen_code = {};
         this.seen_code_uncompiled = {};
     }
@@ -213,11 +210,9 @@ CPU.prototype.create_jit_imports = function()
 
 CPU.prototype.wasm_patch = function()
 {
-    const get_optional_import = (name) => {
-        return this.wm.exports[name];
-    };
+    const get_optional_import = name => this.wm.exports[name];
 
-    const get_import = (name) =>
+    const get_import = name =>
     {
         const f = get_optional_import(name);
         console.assert(f, "Missing import: " + name);
@@ -228,12 +223,12 @@ CPU.prototype.wasm_patch = function()
 
     this.getiopl = get_import("getiopl");
     this.get_eflags = get_import("get_eflags");
-    this.get_eflags_no_arith = get_import("get_eflags_no_arith");
 
-    this.pic_call_irq = get_import("pic_call_irq");
+    this.handle_irqs = get_import("handle_irqs");
 
-    this.do_many_cycles_native = get_import("do_many_cycles_native");
-    this.do_many_cycles_native_nojit = get_import("do_many_cycles_native_nojit");
+    this.main_loop = get_import("main_loop");
+
+    this.set_jit_config = get_import("set_jit_config");
 
     this.read8 = get_import("read8");
     this.read16 = get_import("read16");
@@ -262,6 +257,9 @@ CPU.prototype.wasm_patch = function()
 
     this.set_cpuid_level = get_import("set_cpuid_level");
 
+    this.pic_set_irq = get_import("pic_set_irq");
+    this.pic_clear_irq = get_import("pic_clear_irq");
+
     if(DEBUG)
     {
         this.jit_force_generate_unsafe = get_optional_import("jit_force_generate_unsafe");
@@ -279,11 +277,29 @@ CPU.prototype.wasm_patch = function()
     this.svga_fill_pixel_buffer = get_import("svga_fill_pixel_buffer");
     this.svga_mark_dirty = get_import("svga_mark_dirty");
 
+    this.get_pic_addr_master = get_import("get_pic_addr_master");
+    this.get_pic_addr_slave = get_import("get_pic_addr_slave");
+
     this.zstd_create_ctx = get_import("zstd_create_ctx");
     this.zstd_get_src_ptr = get_import("zstd_get_src_ptr");
     this.zstd_free_ctx = get_import("zstd_free_ctx");
     this.zstd_read = get_import("zstd_read");
     this.zstd_read_free = get_import("zstd_read_free");
+
+    this.port20_read = get_import("port20_read");
+    this.port21_read = get_import("port21_read");
+    this.portA0_read = get_import("portA0_read");
+    this.portA1_read = get_import("portA1_read");
+
+    this.port20_write = get_import("port20_write");
+    this.port21_write = get_import("port21_write");
+    this.portA0_write = get_import("portA0_write");
+    this.portA1_write = get_import("portA1_write");
+
+    this.port4D0_read = get_import("port4D0_read");
+    this.port4D1_read = get_import("port4D1_read");
+    this.port4D0_write = get_import("port4D0_write");
+    this.port4D1_write = get_import("port4D1_write");
 };
 
 CPU.prototype.jit_force_generate = function(addr)
@@ -363,7 +379,7 @@ CPU.prototype.get_state = function()
     state[48] = this.devices.pci;
     state[49] = this.devices.dma;
     state[50] = this.devices.acpi;
-    state[51] = this.devices.hpet;
+    // 51 (formerly hpet)
     state[52] = this.devices.vga;
     state[53] = this.devices.ps2;
     state[54] = this.devices.uart0;
@@ -372,7 +388,7 @@ CPU.prototype.get_state = function()
     state[57] = this.devices.hda;
     state[58] = this.devices.pit;
     state[59] = this.devices.net;
-    state[60] = this.devices.pic;
+    state[60] = this.get_state_pic();
     state[61] = this.devices.sb16;
 
     state[62] = this.fw_value;
@@ -400,6 +416,47 @@ CPU.prototype.get_state = function()
     state[79] = this.devices.uart1;
     state[80] = this.devices.uart2;
     state[81] = this.devices.uart3;
+    state[82] = this.devices.virtio_console;
+
+    return state;
+};
+
+CPU.prototype.get_state_pic = function()
+{
+    const pic_size = 13;
+    const pic = new Uint8Array(this.wasm_memory.buffer, this.get_pic_addr_master(), pic_size);
+    const pic_slave = new Uint8Array(this.wasm_memory.buffer, this.get_pic_addr_slave(), pic_size);
+
+    const state = [];
+    const state_slave = [];
+
+    state[0] = pic[0]; // irq_mask
+    state[1] = pic[1]; // irq_map
+    state[2] = pic[2]; // isr
+    state[3] = pic[3]; // irr
+    state[4] = pic[4]; // is_master
+    state[5] = state_slave;
+    state[6] = pic[6]; // expect_icw4
+    state[7] = pic[7]; // state
+    state[8] = pic[8]; // read_isr
+    state[9] = pic[9]; // auto_eoi
+    state[10] = pic[10]; // special_mask_mode
+    state[11] = pic[11]; // elcr
+    state[12] = pic[12]; // irq_value (undefined in old state images)
+
+    state_slave[0] = pic_slave[0]; // irq_mask
+    state_slave[1] = pic_slave[1]; // irq_map
+    state_slave[2] = pic_slave[2]; // isr
+    state_slave[3] = pic_slave[3]; // irr
+    state_slave[4] = pic_slave[4]; // is_master
+    state_slave[5] = null;
+    state_slave[6] = pic_slave[6]; // expect_icw4
+    state_slave[7] = pic_slave[7]; // state
+    state_slave[8] = pic_slave[8]; // read_isr
+    state_slave[9] = pic_slave[9]; // auto_eoi
+    state_slave[10] = pic_slave[10]; // elcr
+    state_slave[12] = pic_slave[12]; // irq_value (undefined in old state images)
+    state_slave[12] = pic_slave[12]; // special_mask_mode (undefined in old state images)
 
     return state;
 };
@@ -459,7 +516,7 @@ CPU.prototype.set_state = function(state)
     this.devices.pci && this.devices.pci.set_state(state[48]);
     this.devices.dma && this.devices.dma.set_state(state[49]);
     this.devices.acpi && this.devices.acpi.set_state(state[50]);
-    this.devices.hpet && this.devices.hpet.set_state(state[51]);
+    // 51 (formerly hpet)
     this.devices.vga && this.devices.vga.set_state(state[52]);
     this.devices.ps2 && this.devices.ps2.set_state(state[53]);
     this.devices.uart0 && this.devices.uart0.set_state(state[54]);
@@ -468,12 +525,13 @@ CPU.prototype.set_state = function(state)
     this.devices.hda && this.devices.hda.set_state(state[57]);
     this.devices.pit && this.devices.pit.set_state(state[58]);
     this.devices.net && this.devices.net.set_state(state[59]);
-    this.devices.pic && this.devices.pic.set_state(state[60]);
+    this.set_state_pic(state[60]);
     this.devices.sb16 && this.devices.sb16.set_state(state[61]);
 
     this.devices.uart1 && this.devices.uart1.set_state(state[79]);
     this.devices.uart2 && this.devices.uart2.set_state(state[80]);
     this.devices.uart3 && this.devices.uart3.set_state(state[81]);
+    this.devices.virtio_console && this.devices.virtio_console.set_state(state[82]);
 
     this.fw_value = state[62];
 
@@ -502,6 +560,44 @@ CPU.prototype.set_state = function(state)
     this.full_clear_tlb();
 
     this.jit_clear_cache();
+};
+
+CPU.prototype.set_state_pic = function(state)
+{
+    // Note: This could exists for compatibility with old state images
+    // It should be deleted when the state version changes
+
+    const pic_size = 13;
+    const pic = new Uint8Array(this.wasm_memory.buffer, this.get_pic_addr_master(), pic_size);
+    const pic_slave = new Uint8Array(this.wasm_memory.buffer, this.get_pic_addr_slave(), pic_size);
+
+    pic[0] = state[0]; // irq_mask
+    pic[1] = state[1]; // irq_map
+    pic[2] = state[2]; // isr
+    pic[3] = state[3]; // irr
+    pic[4] = state[4]; // is_master
+    const state_slave = state[5];
+    pic[6] = state[6]; // expect_icw4
+    pic[7] = state[7]; // state
+    pic[8] = state[8]; // read_isr
+    pic[9] = state[9]; // auto_eoi
+    pic[10] = state[10]; // special_mask_mode
+    pic[11] = state[11]; // elcr
+    pic[12] = state[12]; // irq_value (undefined in old state images)
+
+    pic_slave[0] = state_slave[0]; // irq_mask
+    pic_slave[1] = state_slave[1]; // irq_map
+    pic_slave[2] = state_slave[2]; // isr
+    pic_slave[3] = state_slave[3]; // irr
+    pic_slave[4] = state_slave[4]; // is_master
+    // dummy
+    pic_slave[6] = state_slave[6]; // expect_icw4
+    pic_slave[7] = state_slave[7]; // state
+    pic_slave[8] = state_slave[8]; // read_isr
+    pic_slave[9] = state_slave[9]; // auto_eoi
+    pic_slave[10] = state_slave[10]; // elcr
+    pic_slave[12] = state_slave[12]; // irq_value (undefined in old state images)
+    pic_slave[12] = state_slave[12]; // special_mask_mode (undefined in old state images)
 };
 
 CPU.prototype.pack_memory = function()
@@ -566,51 +662,19 @@ CPU.prototype.unpack_memory = function(bitmap, packed_memory)
     }
 };
 
-/**
- * @return {number} time in ms until this method should becalled again
- */
-CPU.prototype.main_run = function()
-{
-    if(this.in_hlt[0])
-    {
-        const t = this.hlt_loop();
-
-        if(this.in_hlt[0])
-        {
-            return t;
-        }
-    }
-
-    const start = v86.microtick();
-    let now = start;
-
-    for(; now - start < TIME_PER_FRAME;)
-    {
-        this.do_many_cycles();
-
-        now = v86.microtick();
-
-        const t = this.run_hardware_timers(now);
-        this.handle_irqs();
-
-        if(this.in_hlt[0])
-        {
-            return t;
-        }
-    }
-
-    return 0;
-};
-
 CPU.prototype.reboot_internal = function()
 {
     this.reset_cpu();
 
     this.fw_value = [];
 
-    if(this.devices.virtio)
+    if(this.devices.virtio_9p)
     {
-        this.devices.virtio.reset();
+        this.devices.virtio_9p.reset();
+    }
+    if(this.devices.virtio_console)
+    {
+        this.devices.virtio_console.reset();
     }
 
     this.load_bios();
@@ -660,7 +724,7 @@ CPU.prototype.init = function(settings, device_bus)
 
     if(settings.disable_jit)
     {
-        this.do_many_cycles_native = this.do_many_cycles_native_nojit;
+        this.set_jit_config(0, 1);
     }
 
     settings.cpuid_level && this.set_cpuid_level(settings.cpuid_level);
@@ -679,7 +743,7 @@ CPU.prototype.init = function(settings, device_bus)
 
     if(settings.bzimage)
     {
-        const { option_rom } = load_kernel(this.mem8, settings.bzimage, settings.initrd, settings.cmdline || "");
+        const option_rom = load_kernel(this.mem8, settings.bzimage, settings.initrd, settings.cmdline || "");
 
         if(option_rom)
         {
@@ -819,12 +883,26 @@ CPU.prototype.init = function(settings, device_bus)
         io.register_write(0xE9, this, function(out_byte) {});
     }
 
+    io.register_read(0x20, this, this.port20_read);
+    io.register_read(0x21, this, this.port21_read);
+    io.register_read(0xA0, this, this.portA0_read);
+    io.register_read(0xA1, this, this.portA1_read);
+
+    io.register_write(0x20, this, this.port20_write);
+    io.register_write(0x21, this, this.port21_write);
+    io.register_write(0xA0, this, this.portA0_write);
+    io.register_write(0xA1, this, this.portA1_write);
+
+    io.register_read(0x4D0, this, this.port4D0_read);
+    io.register_read(0x4D1, this, this.port4D1_read);
+    io.register_write(0x4D0, this, this.port4D0_write);
+    io.register_write(0x4D1, this, this.port4D1_write);
+
     this.devices = {};
 
     // TODO: Make this more configurable
     if(settings.load_devices)
     {
-        this.devices.pic = new PIC(this);
         this.devices.pci = new PCI(this);
 
         if(this.acpi_enabled[0])
@@ -838,11 +916,6 @@ CPU.prototype.init = function(settings, device_bus)
         this.fill_cmos(this.devices.rtc, settings);
 
         this.devices.dma = new DMA(this);
-
-        if(ENABLE_HPET)
-        {
-            this.devices.hpet = new HPET(this);
-        }
 
         this.devices.vga = new VGAScreen(this, device_bus,
                 settings.vga_memory_size || 8 * 1024 * 1024);
@@ -889,6 +962,10 @@ CPU.prototype.init = function(settings, device_bus)
         {
             this.devices.virtio_9p = new Virtio9p(settings.fs9p, this, device_bus);
         }
+        if(settings.virtio_console)
+        {
+            this.devices.virtio_console = new VirtioConsole(this, device_bus);
+        }
 
         if(true)
         {
@@ -898,7 +975,22 @@ CPU.prototype.init = function(settings, device_bus)
 
     if(settings.multiboot)
     {
-        this.load_multiboot(settings.multiboot);
+        dbg_log("loading multiboot", LOG_CPU);
+        const option_rom = this.load_multiboot_option_rom(settings.multiboot, settings.initrd, settings.cmdline);
+
+        if(option_rom)
+        {
+            if(this.bios.main)
+            {
+                dbg_log("adding option rom for multiboot", LOG_CPU);
+                this.option_roms.push(option_rom);
+            }
+            else
+            {
+                dbg_log("loaded multiboot without bios", LOG_CPU);
+                this.reg32[REG_EAX] = this.io.port_read32(0xF4);
+            }
+        }
     }
 
     if(DEBUG)
@@ -907,16 +999,36 @@ CPU.prototype.init = function(settings, device_bus)
     }
 };
 
-CPU.prototype.load_multiboot = function(buffer)
+CPU.prototype.load_multiboot = function (buffer)
+{
+    if(this.bios.main)
+    {
+        dbg_assert(false, "load_multiboot not supported with BIOS");
+    }
+
+    const option_rom = this.load_multiboot_option_rom(buffer, undefined, "");
+    if(option_rom)
+    {
+        dbg_log("loaded multiboot", LOG_CPU);
+        this.reg32[REG_EAX] = this.io.port_read32(0xF4);
+    }
+};
+
+CPU.prototype.load_multiboot_option_rom = function(buffer, initrd, cmdline)
 {
     // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html
 
     dbg_log("Trying multiboot from buffer of size " + buffer.byteLength, LOG_CPU);
 
-    const MAGIC = 0x1BADB002;
     const ELF_MAGIC = 0x464C457F;
+    const MULTIBOOT_HEADER_MAGIC = 0x1BADB002;
+    const MULTIBOOT_HEADER_MEMORY_INFO = 0x2;
     const MULTIBOOT_HEADER_ADDRESS = 0x10000;
+    const MULTIBOOT_BOOTLOADER_MAGIC = 0x2BADB002;
     const MULTIBOOT_SEARCH_BYTES = 8192;
+    const MULTIBOOT_INFO_STRUCT_LEN = 116;
+    const MULTIBOOT_INFO_CMDLINE = 0x4;
+    const MULTIBOOT_INFO_MEM_MAP = 0x40;
 
     if(buffer.byteLength < MULTIBOOT_SEARCH_BYTES)
     {
@@ -930,11 +1042,11 @@ CPU.prototype.load_multiboot = function(buffer)
 
     for(var offset = 0; offset < MULTIBOOT_SEARCH_BYTES; offset += 4)
     {
-        if(buf32[offset >> 2] === MAGIC)
+        if(buf32[offset >> 2] === MULTIBOOT_HEADER_MAGIC)
         {
             var flags = buf32[offset + 4 >> 2];
             var checksum = buf32[offset + 8 >> 2];
-            var total = MAGIC + flags + checksum | 0;
+            var total = MULTIBOOT_HEADER_MAGIC + flags + checksum | 0;
 
             if(total)
             {
@@ -948,123 +1060,228 @@ CPU.prototype.load_multiboot = function(buffer)
         }
 
         dbg_log("Multiboot magic found, flags: " + h(flags >>> 0, 8), LOG_CPU);
-        dbg_assert((flags & ~MULTIBOOT_HEADER_ADDRESS) === 0, "TODO");
+        // bit 0 : load modules on page boundaries (may as well, if we load modules)
+        // bit 1 : provide a memory map (which we always will)
+        dbg_assert((flags & ~MULTIBOOT_HEADER_ADDRESS & ~3) === 0, "TODO");
 
-        this.reg32[REG_EAX] = 0x2BADB002;
+        // do this in a io register hook, so it can happen after BIOS does its work
+        var cpu = this;
 
-        let multiboot_info_addr = 0x7C00;
-        this.reg32[REG_EBX] = multiboot_info_addr;
-        this.write32(multiboot_info_addr, 0);
+        this.io.register_read(0xF4, this, function () {return 0;} , function () { return 0;}, function () {
+            // actually do the load and return the multiboot magic
+            let multiboot_info_addr = 0x7C00;
+            let multiboot_data = multiboot_info_addr + MULTIBOOT_INFO_STRUCT_LEN;
+            let info = 0;
 
-        this.cr[0] = 1;
-        this.protected_mode[0] = +true;
-        this.flags[0] = FLAGS_DEFAULT;
-        this.is_32[0] = +true;
-        this.stack_size_32[0] = +true;
-
-        for(var i = 0; i < 6; i++)
-        {
-            this.segment_is_null[i] = 0;
-            this.segment_offsets[i] = 0;
-            this.segment_limits[i] = 0xFFFFFFFF;
-
-            // Value doesn't matter, OS isn't allowed to reload without setting
-            // up a proper GDT
-            this.sreg[i] = 0xB002;
-        }
-
-        if(flags & MULTIBOOT_HEADER_ADDRESS)
-        {
-            dbg_log("Multiboot specifies its own address table", LOG_CPU);
-
-            var header_addr = buf32[offset + 12 >> 2];
-            var load_addr = buf32[offset + 16 >> 2];
-            var load_end_addr = buf32[offset + 20 >> 2];
-            var bss_end_addr = buf32[offset + 24 >> 2];
-            var entry_addr = buf32[offset + 28 >> 2];
-
-            dbg_log("header=" + h(header_addr, 8) +
-                    " load=" + h(load_addr, 8) +
-                    " load_end=" + h(load_end_addr, 8) +
-                    " bss_end=" + h(bss_end_addr, 8) +
-                    " entry=" + h(entry_addr, 8));
-
-            dbg_assert(load_addr <= header_addr);
-
-            var file_start = offset - (header_addr - load_addr);
-
-            if(load_end_addr === 0)
+            // command line
+            if(cmdline)
             {
-                var length = undefined;
-            }
-            else
-            {
-                dbg_assert(load_end_addr >= load_addr);
-                var length = load_end_addr - load_addr;
+                info |= MULTIBOOT_INFO_CMDLINE;
+
+                cpu.write32(multiboot_info_addr + 16, multiboot_data);
+
+                cmdline += "\x00";
+                const encoder = new TextEncoder();
+                const cmdline_utf8 = encoder.encode(cmdline);
+                cpu.write_blob(cmdline_utf8, multiboot_data);
+                multiboot_data += cmdline_utf8.length;
             }
 
-            let blob = new Uint8Array(buffer, file_start, length);
-            this.write_blob(blob, load_addr);
-
-            this.instruction_pointer[0] = this.get_seg_cs() + entry_addr | 0;
-        }
-        else if(buf32[0] === ELF_MAGIC)
-        {
-            dbg_log("Multiboot image is in elf format", LOG_CPU);
-
-            let elf = read_elf(buffer);
-
-            this.instruction_pointer[0] = this.get_seg_cs() + elf.header.entry | 0;
-
-            for(let program of elf.program_headers)
+            // memory map
+            if(flags & MULTIBOOT_HEADER_MEMORY_INFO)
             {
-                if(program.type === 0)
-                {
-                    // null
-                }
-                else if(program.type === 1)
-                {
-                    // load
+                info |= MULTIBOOT_INFO_MEM_MAP;
+                let multiboot_mmap_count = 0;
+                cpu.write32(multiboot_info_addr + 44, 0);
+                cpu.write32(multiboot_info_addr + 48, multiboot_data);
 
-                    // Since multiboot specifies that paging is disabled,
-                    // virtual and physical address must be equal
-                    dbg_assert(program.paddr === program.vaddr);
-                    dbg_assert(program.filesz <= program.memsz);
-
-                    if(program.paddr + program.memsz < this.memory_size[0])
+                // Create a memory map for the multiboot kernel
+                // does not exclude traditional bios exclusions
+                let start = 0;
+                let was_memory = false;
+                for(let addr = 0; addr < MMAP_MAX; addr += MMAP_BLOCK_SIZE)
+                {
+                    if(was_memory && cpu.memory_map_read8[addr >>> MMAP_BLOCK_BITS] !== undefined)
                     {
-                        if(program.filesz) // offset might be outside of buffer if filesz is 0
-                        {
-                            let blob = new Uint8Array(buffer, program.offset, program.filesz);
-                            this.write_blob(blob, program.paddr);
-                        }
+                        cpu.write32(multiboot_data, 20); // size
+                        cpu.write32(multiboot_data + 4, start); //addr (64-bit)
+                        cpu.write32(multiboot_data + 8, 0);
+                        cpu.write32(multiboot_data + 12, addr - start); // len (64-bit)
+                        cpu.write32(multiboot_data + 16, 0);
+                        cpu.write32(multiboot_data + 20, 1); // type (MULTIBOOT_MEMORY_AVAILABLE)
+                        multiboot_data += 24;
+                        multiboot_mmap_count += 24;
+                        was_memory = false;
                     }
-                    else
+                    else if(!was_memory && cpu.memory_map_read8[addr >>> MMAP_BLOCK_BITS] === undefined)
                     {
-                        dbg_log("Warning: Skipped loading section, paddr=" + h(program.paddr) + " memsz=" + program.memsz, LOG_CPU);
+                        start = addr;
+                        was_memory = true;
                     }
                 }
-                else if(
-                    program.type === 2 ||
-                    program.type === 3 ||
-                    program.type === 4 ||
-                    program.type === 6 ||
-                    program.type === 0x6474e550 ||
-                    program.type === 0x6474e551 ||
-                    program.type === 0x6474e553)
+                dbg_assert (!was_memory, "top of 4GB shouldn't have memory");
+                cpu.write32(multiboot_info_addr + 44, multiboot_mmap_count);
+            }
+
+            cpu.write32(multiboot_info_addr, info);
+
+            let entrypoint = 0;
+            let top_of_load = 0;
+
+            if(flags & MULTIBOOT_HEADER_ADDRESS)
+            {
+                dbg_log("Multiboot specifies its own address table", LOG_CPU);
+
+                var header_addr = buf32[offset + 12 >> 2];
+                var load_addr = buf32[offset + 16 >> 2];
+                var load_end_addr = buf32[offset + 20 >> 2];
+                var bss_end_addr = buf32[offset + 24 >> 2];
+                var entry_addr = buf32[offset + 28 >> 2];
+
+                dbg_log("header=" + h(header_addr, 8) +
+                        " load=" + h(load_addr, 8) +
+                        " load_end=" + h(load_end_addr, 8) +
+                        " bss_end=" + h(bss_end_addr, 8) +
+                        " entry=" + h(entry_addr, 8));
+
+                dbg_assert(load_addr <= header_addr);
+
+                var file_start = offset - (header_addr - load_addr);
+
+                if(load_end_addr === 0)
                 {
-                    // ignore for now
+                    var length = undefined;
                 }
                 else
                 {
-                    dbg_assert(false, "unimplemented elf section type: " + h(program.type));
+                    dbg_assert(load_end_addr >= load_addr);
+                    var length = load_end_addr - load_addr;
+                }
+
+                let blob = new Uint8Array(buffer, file_start, length);
+                cpu.write_blob(blob, load_addr);
+
+                entrypoint = entry_addr | 0;
+                top_of_load = Math.max(load_end_addr, bss_end_addr);
+            }
+            else if(buf32[0] === ELF_MAGIC)
+            {
+                dbg_log("Multiboot image is in elf format", LOG_CPU);
+
+                let elf = read_elf(buffer);
+
+                entrypoint = elf.header.entry;
+
+                for(let program of elf.program_headers)
+                {
+                    if(program.type === 0)
+                    {
+                        // null
+                    }
+                    else if(program.type === 1)
+                    {
+                        // load
+
+                        dbg_assert(program.filesz <= program.memsz);
+
+                        if(program.paddr + program.memsz < cpu.memory_size[0])
+                        {
+                            if(program.filesz) // offset might be outside of buffer if filesz is 0
+                            {
+                                let blob = new Uint8Array(buffer, program.offset, program.filesz);
+                                cpu.write_blob(blob, program.paddr);
+                            }
+                            top_of_load = Math.max(top_of_load, program.paddr + program.memsz);
+                            dbg_log("prg load " + program.paddr + " to " + (program.paddr + program.memsz), LOG_CPU);
+
+                            // Since multiboot specifies that paging is disabled, we load to the physical address;
+                            // but the entry point is specified in virtual addresses so adjust the entrypoint if needed
+
+                            if(entrypoint === elf.header.entry && program.vaddr <= entrypoint && (program.vaddr + program.memsz) > entrypoint)
+                            {
+                                entrypoint = (entrypoint - program.vaddr) + program.paddr;
+                            }
+                        }
+                        else
+                        {
+                            dbg_log("Warning: Skipped loading section, paddr=" + h(program.paddr) + " memsz=" + program.memsz, LOG_CPU);
+                        }
+                    }
+                    else if(
+                        program.type === 2 || // dynamic
+                        program.type === 3 || // interp
+                        program.type === 4 || // note
+                        program.type === 6 || // phdr
+                        program.type === 7 || // tls
+                        program.type === 0x6474e550 || // gnu_eh_frame
+                        program.type === 0x6474e551 || // gnu_stack
+                        program.type === 0x6474e552 || // gnu_relro
+                        program.type === 0x6474e553)   // gnu_property
+                    {
+                        dbg_log("skip load type " + program.type + " " + program.paddr + " to " + (program.paddr + program.memsz), LOG_CPU);
+                        // ignore for now
+                    }
+                    else
+                    {
+                        dbg_assert(false, "unimplemented elf section type: " + h(program.type));
+                    }
                 }
             }
-        }
-        else
-        {
-            dbg_assert(false, "Not a bootable multiboot format");
-        }
+            else
+            {
+                dbg_assert(false, "Not a bootable multiboot format");
+            }
+
+            if(initrd)
+            {
+                cpu.write32(multiboot_info_addr + 20, 1); // mods_count
+                cpu.write32(multiboot_info_addr + 24, multiboot_data); // mods_addr;
+
+                var ramdisk_address = top_of_load;
+                if((ramdisk_address & 4095) !== 0)
+                {
+                    ramdisk_address = (ramdisk_address & ~4095) + 4096;
+                }
+                dbg_log("ramdisk address " + ramdisk_address);
+                var ramdisk_top = ramdisk_address + initrd.byteLength;
+
+                cpu.write32(multiboot_data, ramdisk_address); // mod_start
+                cpu.write32(multiboot_data + 4, ramdisk_top); // mod_end
+                cpu.write32(multiboot_data + 8, 0); // string
+                cpu.write32(multiboot_data + 12, 0); // reserved
+                multiboot_data += 16;
+
+                dbg_assert(ramdisk_top < cpu.memory_size[0]);
+
+                cpu.write_blob(new Uint8Array(initrd), ramdisk_address);
+            }
+
+            // set state for multiboot
+
+            cpu.reg32[REG_EBX] = multiboot_info_addr;
+            cpu.cr[0] = 1;
+            cpu.protected_mode[0] = +true;
+            cpu.flags[0] = FLAGS_DEFAULT;
+            cpu.is_32[0] = +true;
+            cpu.stack_size_32[0] = +true;
+
+            for(var i = 0; i < 6; i++)
+            {
+                cpu.segment_is_null[i] = 0;
+                cpu.segment_offsets[i] = 0;
+                cpu.segment_limits[i] = 0xFFFFFFFF;
+                // Value doesn't matter, OS isn't allowed to reload without setting
+                // up a proper GDT
+                cpu.sreg[i] = 0xB002;
+            }
+            cpu.instruction_pointer[0] = cpu.get_seg_cs() + entrypoint | 0;
+            cpu.update_state_flags();
+            dbg_log("Starting multiboot kernel at:", LOG_CPU);
+            cpu.debug.dump_state();
+            cpu.debug.dump_regs();
+
+            return MULTIBOOT_BOOTLOADER_MAGIC;
+        });
 
         // only for kvm-unit-test
         this.io.register_write_consecutive(0xF4, this,
@@ -1096,14 +1313,41 @@ CPU.prototype.load_multiboot = function(buffer)
             this.io.register_write(0x2000 + i, this, handle_write, handle_write, handle_write);
         }
 
-        this.update_state_flags();
+        // This rom will be executed by seabios after its initialisation
+        // It sets up the multiboot environment.
+        const SIZE = 0x200;
 
-        dbg_log("Starting multiboot kernel at:", LOG_CPU);
-        this.debug.dump_state();
-        this.debug.dump_regs();
+        const data8 = new Uint8Array(SIZE);
+        const data16 = new Uint16Array(data8.buffer);
 
-        break;
+        data16[0] = 0xAA55;
+        data8[2] = SIZE / 0x200;
+        let i = 3;
+        // trigger load
+        data8[i++] = 0x66; // in 0xF4
+        data8[i++] = 0xE5;
+        data8[i++] = 0xF4;
+
+        dbg_assert(i < SIZE);
+
+        const checksum_index = i;
+        data8[checksum_index] = 0;
+
+        let rom_checksum = 0;
+
+        for(let i = 0; i < data8.length; i++)
+        {
+            rom_checksum += data8[i];
+        }
+
+        data8[checksum_index] = -rom_checksum;
+
+        return {
+            name: "genroms/multiboot.bin",
+            data: data8
+        };
     }
+    dbg_log("Multiboot header not found", LOG_CPU);
 };
 
 CPU.prototype.fill_cmos = function(rtc, settings)
@@ -1222,22 +1466,6 @@ CPU.prototype.load_bios = function()
             addr &= 0xFFFFF;
             this.mem8[addr] = value;
         }.bind(this));
-};
-
-CPU.prototype.do_many_cycles = function()
-{
-    if(DEBUG)
-    {
-        var start_time = v86.microtick();
-    }
-
-    this.do_many_cycles_native();
-
-    if(DEBUG)
-    {
-        this.do_many_cycles_total += v86.microtick() - start_time;
-        this.do_many_cycles_count++;
-    }
 };
 
 CPU.prototype.codegen_finalize = function(wasm_table_index, start, state_flags, ptr, len)
@@ -1398,96 +1626,26 @@ CPU.prototype.dump_function_code = function(block_ptr, count)
     }
 };
 
-CPU.prototype.hlt_loop = function()
+CPU.prototype.run_hardware_timers = function(acpi_enabled, now)
 {
-    if(this.get_eflags_no_arith() & FLAG_INTERRUPT)
-    {
-        const t = this.run_hardware_timers(v86.microtick());
-        this.handle_irqs();
-        return t;
-    }
-    else
-    {
-        return 100;
-    }
-};
-
-CPU.prototype.run_hardware_timers = function(now)
-{
-    if(ENABLE_HPET)
-    {
-        var pit_time = this.devices.pit.timer(now, this.devices.hpet.legacy_mode);
-        var rtc_time = this.devices.rtc.timer(now, this.devices.hpet.legacy_mode);
-        var hpet_time = this.devices.hpet.timer(now);
-    }
-    else
-    {
-        var pit_time = this.devices.pit.timer(now, false);
-        var rtc_time = this.devices.rtc.timer(now, false);
-        var hpet_time = 100;
-    }
+    const pit_time = this.devices.pit.timer(now, false);
+    const rtc_time = this.devices.rtc.timer(now, false);
 
     let acpi_time = 100;
     let apic_time = 100;
-    if(this.acpi_enabled[0])
+    if(acpi_enabled)
     {
         acpi_time = this.devices.acpi.timer(now);
         apic_time = this.devices.apic.timer(now);
     }
 
-    return Math.min(pit_time, rtc_time, hpet_time, acpi_time, apic_time);
-};
-
-CPU.prototype.hlt_op = function()
-{
-    if((this.get_eflags_no_arith() & FLAG_INTERRUPT) === 0)
-    {
-        // execution can never resume (until NMIs are supported)
-        this.bus.send("cpu-event-halt");
-    }
-
-    // get out of here and into hlt_loop
-    this.in_hlt[0] = +true;
-
-    // Try an hlt loop right now: This will run timer interrupts, and if one is
-    // due it will immediately call call_interrupt_vector and continue
-    // execution without an unnecessary cycle through do_run
-    this.hlt_loop();
-};
-
-CPU.prototype.handle_irqs = function()
-{
-    //dbg_assert(this.prefixes[0] === 0);
-
-    if(this.get_eflags_no_arith() & FLAG_INTERRUPT)
-    {
-        this.pic_acknowledge();
-        this.next_tick_immediately();
-    }
-};
-
-CPU.prototype.pic_acknowledge = function()
-{
-    dbg_assert(this.get_eflags_no_arith() & FLAG_INTERRUPT);
-
-    if(this.devices.pic)
-    {
-        this.devices.pic.acknowledge_irq();
-    }
-
-    if(this.devices.apic)
-    {
-        this.devices.apic.acknowledge_irq();
-    }
+    return Math.min(pit_time, rtc_time, acpi_time, apic_time);
 };
 
 CPU.prototype.device_raise_irq = function(i)
 {
     dbg_assert(arguments.length === 1);
-    if(this.devices.pic)
-    {
-        this.devices.pic.set_irq(i);
-    }
+    this.pic_set_irq(i);
 
     if(this.devices.ioapic)
     {
@@ -1497,10 +1655,7 @@ CPU.prototype.device_raise_irq = function(i)
 
 CPU.prototype.device_lower_irq = function(i)
 {
-    if(this.devices.pic)
-    {
-        this.devices.pic.clear_irq(i);
-    }
+    this.pic_clear_irq(i);
 
     if(this.devices.ioapic)
     {

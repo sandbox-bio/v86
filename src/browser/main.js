@@ -317,7 +317,7 @@
                 id: "fiwix",
                 memory_size: 256 * 1024 * 1024,
                 hda: {
-                    url: host + "fiwixos-doom-3.2-i386.img",
+                    url: host + "FiwixOS-3.3-i386.img",
                     size: 1024 * 1024 * 1024,
                     async: true,
                     fixed_chunk_size: 1024 * 1024,
@@ -533,6 +533,15 @@
                 name: "KolibriOS",
             },
             {
+                id: "mu",
+                hda: {
+                    url: host + "mu-shell.img",
+                },
+                memory_size: 256 * 1024 * 1024,
+                name: "Mu",
+                homepage: "https://github.com/akkartik/mu",
+            },
+            {
                 id: "openbsd",
                 hda: {
                     url: host + "openbsd.img",
@@ -631,6 +640,16 @@
                 },
                 name: "Floppy Bird",
                 homepage: "http://mihail.co/floppybird",
+            },
+            {
+                id: "duskos",
+                hda: {
+                    url: host + "duskos.img",
+                    async: false,
+                    size: 8388608,
+                },
+                name: "Dusk OS",
+                homepage: "http://duskos.org/",
             },
             {
                 id: "windows2000",
@@ -1487,14 +1506,6 @@
                     emulator.keyboard_send_text("\n");
                 }, 3000);
             }
-            else if(settings.id === "android" || settings.id === "android4")
-            {
-                setTimeout(() => {
-                    // hack: select vesa mode and start automatically
-                    emulator.keyboard_send_scancodes([0xe050, 0xe050 | 0x80]);
-                    emulator.keyboard_send_text("\n");
-                }, 3000);
-            }
 
             init_ui(settings, emulator);
 
@@ -2002,7 +2013,6 @@
             if(mouse_is_enabled && os_uses_mouse)
             {
                 emulator.lock_mouse();
-                $("lock_mouse").blur();
             }
             else
             {

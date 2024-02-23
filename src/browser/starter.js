@@ -110,12 +110,12 @@ function V86(options)
 
     const wasm_shared_funcs = {
         "cpu_exception_hook": n => this.cpu_exception_hook(n),
-        "hlt_op": function() { return cpu.hlt_op(); },
+        "run_hardware_timers": function(a, t) { return cpu.run_hardware_timers(a, t); },
+        "cpu_event_halt": () => { this.emulator_bus.send("cpu-event-halt"); },
         "abort": function() { dbg_assert(false); },
         "microtick": v86.microtick,
         "get_rand_int": function() { return v86util.get_rand_int(); },
-
-        "pic_acknowledge": function() { cpu.pic_acknowledge(); },
+        "apic_acknowledge_irq": function() { return cpu.devices.apic.acknowledge_irq(); },
 
         "io_port_read8": function(addr) { return cpu.io.port_read8(addr); },
         "io_port_read16": function(addr) { return cpu.io.port_read16(addr); },
@@ -280,6 +280,7 @@ V86.prototype.continue_init = async function(emulator, options)
     settings.preserve_mac_from_state_image = options.preserve_mac_from_state_image;
     settings.mac_address_translation = options.mac_address_translation;
     settings.cpuid_level = options.cpuid_level;
+    settings.virtio_console = options.virtio_console;
 
     if(options.network_adapter)
     {
@@ -652,8 +653,9 @@ V86.prototype.zstd_decompress_worker = async function(decompressed_size, src)
                 if(!wasm)
                 {
                     const env = Object.fromEntries([
-                        "cpu_exception_hook", "hlt_op",
-                        "microtick", "get_rand_int", "pic_acknowledge",
+                        "cpu_exception_hook", "run_hardware_timers",
+                        "cpu_event_halt", "microtick", "get_rand_int",
+                        "apic_acknowledge_irq",
                         "io_port_read8", "io_port_read16", "io_port_read32",
                         "io_port_write8", "io_port_write16", "io_port_write32",
                         "mmap_read8", "mmap_read16", "mmap_read32",
@@ -1118,6 +1120,46 @@ V86.prototype.serial_send_bytes = function(serial, data)
     {
         this.bus.send("serial" + serial + "-input", data[i]);
     }
+};
+
+/**
+ * Set the modem status of a serial port.
+ */
+V86.prototype.serial_set_modem_status = function(serial, status)
+{
+    this.bus.send("serial" + serial + "-modem-status-input", status);
+};
+
+/**
+ * Set the carrier detect status of a serial port.
+ */
+V86.prototype.serial_set_carrier_detect = function(serial, status)
+{
+    this.bus.send("serial" + serial + "-carrier-detect-input", status);
+};
+
+/**
+ * Set the ring indicator status of a serial port.
+ */
+V86.prototype.serial_set_ring_indicator = function(serial, status)
+{
+    this.bus.send("serial" + serial + "-ring-indicator-input", status);
+};
+
+/**
+ * Set the data set ready status of a serial port.
+ */
+V86.prototype.serial_set_data_set_ready = function(serial, status)
+{
+    this.bus.send("serial" + serial + "-data-set-ready-input", status);
+};
+
+/**
+ * Set the clear to send status of a serial port.
+ */
+V86.prototype.serial_set_clear_to_send = function(serial, status)
+{
+    this.bus.send("serial" + serial + "-clear-to-send-input", status);
 };
 
 /**

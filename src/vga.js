@@ -32,6 +32,12 @@ var VGA_PIXEL_BUFFER_SIZE = 8 * VGA_BANK_SIZE;
 var VGA_MIN_MEMORY_SIZE = 4 * VGA_BANK_SIZE;
 
 /**
+ * Avoid wrapping past VGA_LFB_ADDRESS
+ * @const
+ */
+var VGA_MAX_MEMORY_SIZE = 256 * 1024 * 1024;
+
+/**
  * @const
  * @see {@link http://www.osdever.net/FreeVGA/vga/graphreg.htm#06}
  */
@@ -215,6 +221,8 @@ function VGAScreen(cpu, bus, vga_memory_size)
      */
     this.svga_offset = 0;
 
+    this.svga_offset_y = 0;
+
     const pci_revision = 0; // set to 2 for qemu extended registers
 
     // Experimental, could probably need some changes
@@ -352,6 +360,11 @@ function VGAScreen(cpu, bus, vga_memory_size)
         this.vga_memory_size = VGA_MIN_MEMORY_SIZE;
         dbg_log("vga memory size rounded up to " + this.vga_memory_size, LOG_VGA);
     }
+    else if(this.vga_memory_size > VGA_MAX_MEMORY_SIZE)
+    {
+        this.vga_memory_size = VGA_MAX_MEMORY_SIZE;
+        dbg_log("vga memory size rounded down to " + this.vga_memory_size, LOG_VGA);
+    }
     else if(this.vga_memory_size & (VGA_BANK_SIZE - 1))
     {
         // round up to next 64k
@@ -360,7 +373,7 @@ function VGAScreen(cpu, bus, vga_memory_size)
     }
 
 
-    const vga_offset = cpu.svga_allocate_memory(this.vga_memory_size);
+    const vga_offset = cpu.svga_allocate_memory(this.vga_memory_size) >>> 0;
     this.svga_memory = v86util.view(Uint8Array, cpu.wasm_memory, vga_offset, this.vga_memory_size);
 
     this.diff_addr_min = this.vga_memory_size;
@@ -835,8 +848,16 @@ VGAScreen.prototype.text_mode_redraw = function()
         chr,
         color;
 
+    const split_screen_row = this.scan_line_to_screen_row(this.line_compare);
+    const row_offset = Math.max(0, (this.offset_register * 2 - this.max_cols) * 2);
+
     for(var row = 0; row < this.max_rows; row++)
     {
+        if(row === split_screen_row)
+        {
+            addr = 0;
+        }
+
         for(var col = 0; col < this.max_cols; col++)
         {
             chr = this.vga_memory[addr];
@@ -848,16 +869,39 @@ VGAScreen.prototype.text_mode_redraw = function()
 
             addr += 2;
         }
+
+        addr += row_offset;
     }
 };
 
 VGAScreen.prototype.vga_memory_write_text_mode = function(addr, value)
 {
-    var memory_start = (addr >> 1) - this.start_address,
-        row = memory_start / this.max_cols | 0,
-        col = memory_start % this.max_cols,
-        chr,
-        color;
+    const max_cols = Math.max(this.max_cols, this.offset_register * 2);
+    let row;
+    let col;
+
+    if((addr >> 1) >= this.start_address)
+    {
+        const memory_start = (addr >> 1) - this.start_address;
+        row = memory_start / max_cols | 0;
+        col = memory_start % max_cols;
+    }
+    else
+    {
+        const memory_start = addr >> 1;
+        row = (memory_start / max_cols | 0) + this.scan_line_to_screen_row(this.line_compare);
+        col = memory_start % max_cols;
+    }
+
+    dbg_assert(row >= 0 && col >= 0);
+
+    if(col >= this.max_cols || row >= this.max_rows)
+    {
+        return;
+    }
+
+    let chr;
+    let color;
 
     // XXX: Should handle 16 bit write if possible
     if(addr & 1)
@@ -880,10 +924,25 @@ VGAScreen.prototype.vga_memory_write_text_mode = function(addr, value)
 
 VGAScreen.prototype.update_cursor = function()
 {
-    var row = (this.cursor_address - this.start_address) / this.max_cols | 0,
-        col = (this.cursor_address - this.start_address) % this.max_cols;
+    const max_cols = Math.max(this.max_cols, this.offset_register * 2);
+    let row;
+    let col;
+
+    if(this.cursor_address >= this.start_address)
+    {
+        row = (this.cursor_address - this.start_address) / max_cols | 0,
+        col = (this.cursor_address - this.start_address) % max_cols;
+    }
+    else
+    {
+        row = (this.cursor_address / max_cols | 0) + this.scan_line_to_screen_row(this.line_compare);
+        col = this.cursor_address % max_cols;
+    }
+
+    dbg_assert(row >= 0 && col >= 0);
 
     row = Math.min(this.max_rows - 1, row);
+    col = Math.min(this.max_cols - 1, col);
 
     this.bus.send("screen-update-cursor", [row, col]);
 };
@@ -2042,13 +2101,15 @@ VGAScreen.prototype.port1CF_write = function(value)
             // y offset
             const offset = value * this.svga_width;
             dbg_log("SVGA offset: " + h(offset) + " y=" + h(value), LOG_VGA);
-            if(this.svga_offset !== offset)
+            if(this.svga_offset_y !== value)
             {
+                this.svga_offset_y = value;
                 this.svga_offset = offset;
                 this.complete_redraw();
             }
             break;
         default:
+            dbg_log("Unimplemented dispi write index: " + h(this.dispi_index), LOG_VGA);
     }
 
     if(this.svga_enabled && (!this.svga_width || !this.svga_height))
@@ -2118,9 +2179,13 @@ VGAScreen.prototype.svga_register_read = function(n)
         case 8:
             // x offset
             return 0;
+        case 9:
+            return this.svga_offset_y;
         case 0x0A:
             // memory size in 64 kilobyte banks
             return this.vga_memory_size / VGA_BANK_SIZE | 0;
+        default:
+            dbg_log("Unimplemented dispi read index: " + h(this.dispi_index), LOG_VGA);
     }
 
     return 0xFF;
