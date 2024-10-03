@@ -89,7 +89,7 @@ RUN git clone --recursive --branch v2.26 https://github.com/lh3/minimap2.git && 
 # Bioinformatics tools - sandbox.bio v2
 # ------------------------------------------------------------------------------
 
-RUN apt-get install -y jellyfish seqkit kraken2 mummer
+RUN apt-get install -y jellyfish seqkit kraken2 mummer libxml2-utils procps
 
 # CSVtk
 RUN curl -L -O "https://github.com/shenwei356/csvtk/releases/download/v0.27.2/csvtk_linux_386.tar.gz" && \
