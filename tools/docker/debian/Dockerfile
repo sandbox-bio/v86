@@ -126,7 +126,7 @@ RUN git clone --branch v1.3.7 --recursive https://github.com/freebayes/freebayes
     install freebayes ${INSTALL_DIR}/freebayes
 
 # vcfdist
-RUN git clone https://github.com/timd1/vcfdist && cd vcfdist/src && \
+RUN git clone --branch v2.5.3 https://github.com/timd1/vcfdist && cd vcfdist/src && \
     make && make install
 
 
