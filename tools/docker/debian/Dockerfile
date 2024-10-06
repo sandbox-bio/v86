@@ -125,6 +125,10 @@ RUN git clone --branch v1.3.7 --recursive https://github.com/freebayes/freebayes
     meson build -Dstatic=true -Dprefer_system_deps=false --buildtype release && cd build && ninja && \
     install freebayes ${INSTALL_DIR}/freebayes
 
+# vcfdist
+RUN git clone https://github.com/timd1/vcfdist && cd vcfdist/src && \
+    make && make install
+
 
 # ------------------------------------------------------------------------------
 # Utilities
