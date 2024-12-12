@@ -129,6 +129,11 @@ RUN git clone --branch v1.3.7 --recursive https://github.com/freebayes/freebayes
 RUN git clone --branch v2.5.3 https://github.com/timd1/vcfdist && cd vcfdist/src && \
     make && make install
 
+# SKA2 (requires Rust > 1.74)
+COPY --from=i386/rust:1.83.0-slim-bookworm /usr/local/rustup /usr/local/rustup
+COPY --from=i386/rust:1.83.0-slim-bookworm /usr/local/cargo /usr/local/cargo
+RUN cargo install ska --target i686-unknown-linux-gnu --jobs 5
+RUN install /usr/local/cargo/bin/ska ${INSTALL_DIR}/ska
 
 # ------------------------------------------------------------------------------
 # Utilities
