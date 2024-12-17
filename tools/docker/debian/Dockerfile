@@ -135,6 +135,12 @@ COPY --from=i386/rust:1.83.0-slim-bookworm /usr/local/cargo /usr/local/cargo
 RUN cargo install ska --target i686-unknown-linux-gnu --jobs 5
 RUN install /usr/local/cargo/bin/ska ${INSTALL_DIR}/ska
 
+# Biopython
+RUN apt-get update -y && apt-get install -y --no-install-suggests python3-biopython
+
+# VeryFastTree
+RUN git clone --branch v4.0.4 https://github.com/citiususc/veryfasttree.git && cd veryfasttree && cmake . && make && make install
+
 # ------------------------------------------------------------------------------
 # Utilities
 # ------------------------------------------------------------------------------
