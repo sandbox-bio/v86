@@ -138,8 +138,16 @@ RUN install /usr/local/cargo/bin/ska ${INSTALL_DIR}/ska
 # Biopython
 RUN apt-get update -y && apt-get install -y --no-install-suggests python3-biopython
 
-# VeryFastTree
-RUN git clone --branch v4.0.4 https://github.com/citiususc/veryfasttree.git && cd veryfasttree && cmake . && make && make install
+# MAFFT
+RUN apt-get install -y mafft
+
+# lsd2
+RUN git clone --branch v.2.4.1 https://github.com/tothuhien/lsd2.git && cd lsd2/src && \
+    make && install lsd2 ${INSTALL_DIR}
+
+# IQ-TREE2
+RUN apt-get install -y iqtree
+
 
 # ------------------------------------------------------------------------------
 # Utilities
