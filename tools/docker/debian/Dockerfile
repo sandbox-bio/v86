@@ -148,6 +148,21 @@ RUN git clone --branch v.2.4.1 https://github.com/tothuhien/lsd2.git && cd lsd2/
 # IQ-TREE2
 RUN apt-get install -y iqtree
 
+# Plink
+RUN apt-get install -y plink1.9
+
+# Newick utils
+RUN apt-get install -y bison flex && \
+    git clone https://github.com/tjunier/newick_utils.git && cd newick_utils && \
+    autoreconf -fi && \
+    CFLAGS="-fcommon" CXXFLAGS="-fcommon" ./configure --prefix=/usr && \
+    make -j4 && \
+    make install
+
+# Numlist for quick calculations on lists of numbers
+RUN git clone https://github.com/niemasd/tools.git && cd tools && \
+    make numlist && install numlist ${INSTALL_DIR}
+
 
 # ------------------------------------------------------------------------------
 # Utilities
@@ -193,7 +208,7 @@ RUN printf '%s\n' 9p 9pnet 9pnet_virtio virtio virtio_ring virtio_pci | tee -a /
     echo 'BOOT=boot-9p' | tee -a /etc/initramfs-tools/initramfs.conf && \
     update-initramfs -u && \
     rustup self uninstall -y && \
-    apt-get remove --purge -y gcc gcc-12 g++ make cmake automake autoconf build-essential libbz2-dev liblzma-dev libncurses5-dev zlib1g-dev libcurl4-gnutls-dev libssl-dev libc6-dev autotools-dev libtool python3-pip pandoc meson ninja-build pkg-config && \
+    apt-get remove --purge -y gcc gcc-12 g++ make cmake automake autoconf build-essential libbz2-dev liblzma-dev libncurses5-dev zlib1g-dev libcurl4-gnutls-dev libssl-dev libc6-dev autotools-dev libtool python3-pip pandoc meson ninja-build pkg-config bison flex && \
     apt-get autoremove --purge -y && \
     apt-get --yes clean && \
     rm -r /var/lib/apt/lists/* && \
